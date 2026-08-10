@@ -1,0 +1,54 @@
+site_name: RPi Recording — Field Guide
+site_description: Setup, maintenance, and recording guide for the insect video tracking rigs
+site_url: https://yourusername.github.io/RPi_recording/
+repo_url: https://github.com/yourusername/RPi_recording
+repo_name: RPi_recording
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs           # top-level sections as tabs
+    - navigation.tabs.sticky    # tabs stay visible while scrolling
+    - navigation.sections       # expand sections in sidebar
+    - navigation.top            # back-to-top button
+    - content.code.copy         # copy button on all code blocks
+    - content.code.annotate     # inline code annotations
+
+markdown_extensions:
+  - admonition                  # coloured callout boxes (warning, note, tip)
+  - pymdownx.details            # collapsible sections
+  - pymdownx.superfences        # code blocks inside admonitions
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true     # tabbed content blocks
+  - attr_list                   # add CSS classes to elements
+  - md_in_html                  # markdown inside HTML blocks
+  - tables
+  - toc:
+      permalink: true           # anchor links on headings
+
+nav:
+  - Home: index.md
+  - Setup & maintenance:
+    - Overview: setup/overview.md
+    - "Step 1: Set up the dev Pi": setup/dev_pi.md
+    - "Step 2: Add a new Pi": setup/add_pi.md
+    - "Step 3: Update Pis": setup/update_pis.md
+  - Recording:
+    - Overview: recording/overview.md
+    - Run a recording session: recording/record.md

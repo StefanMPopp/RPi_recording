@@ -1,0 +1,6 @@
+hardware:
+  sd_write_speed_mbs: 23.0
+  sd_write_speed_measured_date: '2026-08-10'
+app:
+  save_dir: /home/pi/Projects
+  show_preview: true

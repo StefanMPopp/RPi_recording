@@ -1,0 +1,10 @@
+# RPi Recorder — Python dependencies
+# Install with: pip install -r requirements.txt --break-system-packages
+#
+# picamera2 is installed via apt on the Pi, not pip:
+#   sudo apt install -y python3-picamera2
+# It is excluded here to avoid pip conflicts.
+
+PyQt6>=6.4.0
+numpy>=1.24.0
+PyYAML>=6.0
