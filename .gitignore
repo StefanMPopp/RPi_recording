@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# App-generated config (machine-specific)
+config_app.yaml
+
+# Ansible per-host configs (hardware-specific, never committed)
+ansible/host_vars/*.yml
+!ansible/host_vars/template.yml
+
+# Recordings
+*.avi
+*.mp4
+*.tiff
+*.png
+
+# MkDocs build output
+site/
