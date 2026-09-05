@@ -1,31 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/recording/overview/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/before_you_start/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/recording/record/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/choosing_settings/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/setup/add_pi/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/metadata_lists/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/setup/dev_pi/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/overview/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/setup/overview/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/record/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
     <url>
-         <loc>https://yourusername.github.io/RPi_recording/setup/update_pis/</loc>
-         <lastmod>2026-08-07</lastmod>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/recorder_app/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/recording/troubleshooting/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/architecture/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/camera_notes/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/development/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/file_formats/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/handover/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/overview/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/reference/repo_layout/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/setup/add_pi/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/setup/dev_pi/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/setup/maintenance/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/setup/overview/</loc>
+         <lastmod>2026-09-05</lastmod>
+    </url>
+    <url>
+         <loc>https://stefanmpopp.github.io/RPi_recording/setup/update_pis/</loc>
+         <lastmod>2026-09-05</lastmod>
     </url>
 </urlset>
