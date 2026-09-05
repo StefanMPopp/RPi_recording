@@ -740,6 +740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../setup/replace_dev_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replace the dev Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../setup/update_pis/" class="md-nav__link">
         
   
@@ -1304,7 +1332,9 @@
 
 
 <h1 id="handover-checklist">Handover checklist<a class="headerlink" href="#handover-checklist" title="Permanent link">&para;</a></h1>
-<p>For whoever takes over the rigs.</p>
+<p>For whoever takes over the rigs. This page covers the <em>knowledge</em>; for the
+mechanics of moving to a new machine or issuing a second key, see
+<a href="../../setup/replace_dev_pi/">Replace the dev Pi</a>.</p>
 <hr />
 <h2 id="credentials-and-access">Credentials and access<a class="headerlink" href="#credentials-and-access" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1320,7 +1350,8 @@
 repository. It exists <strong>only on the dev Pi</strong> unless someone backed it up.</p>
 <p>If it is lost: generate a new one, add it to GitHub as a deploy key, and
 <code>ssh-copy-id</code> it to all eight rigs using their passwords. Recoverable, but
-an afternoon's work.</p>
+an afternoon's work — see
+<a href="../../setup/replace_dev_pi/#recovery-old-machine-is-gone">Recovery</a>.</p>
 </div>
 <hr />
 <h2 id="files-that-exist-nowhere-else">Files that exist nowhere else<a class="headerlink" href="#files-that-exist-nowhere-else" title="Permanent link">&para;</a></h2>

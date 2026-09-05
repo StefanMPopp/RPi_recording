@@ -1,0 +1,1961 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+      
+      
+      
+        <link rel="canonical" href="https://stefanmpopp.github.io/RPi_recording/setup/replace_dev_pi/">
+      
+      
+        <link rel="prev" href="../add_pi/">
+      
+      
+        <link rel="next" href="../update_pis/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Replace the dev Pi - RPi Recording</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#replace-or-migrate-the-dev-pi" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RPi Recording" class="md-header__button md-logo" aria-label="RPi Recording" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RPi Recording
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Replace the dev Pi
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/StefanMPopp/RPi_recording" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RPi_recording
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../recording/overview/" class="md-tabs__link">
+          
+  
+  
+  Recording
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../overview/" class="md-tabs__link">
+          
+  
+  
+  Setup & maintenance
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/overview/" class="md-tabs__link">
+          
+  
+  
+  Developer reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RPi Recording" class="md-nav__button md-logo" aria-label="RPi Recording" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    RPi Recording
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/StefanMPopp/RPi_recording" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RPi_recording
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recording
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Recording
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/before_you_start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Before you start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/recorder_app/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The recorder app
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/metadata_lists/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata lists
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/choosing_settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recording/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup & maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Setup & maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dev_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Set up the dev Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../add_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add a new Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replace the dev Pi
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replace the dev Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-makes-a-dev-pi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What makes a dev Pi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-old-machine-still-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration (old machine still works)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration (old machine still works)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-back-up-from-the-old-dev-pi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Back up from the old dev Pi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-set-up-the-new-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Set up the new machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-restore-the-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Restore the key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clone-and-restore-host_vars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clone and restore host_vars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-give-the-new-machine-a-static-ip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Give the new machine a static IP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-retire-the-old-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Retire the old machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recovery-old-machine-is-gone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recovery (old machine is gone)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recovery (old machine is gone)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-build-a-new-dev-pi-from-scratch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Build a new dev Pi from scratch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-authorise-the-new-key-on-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Authorise the new key on GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-clone-the-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Clone the repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-re-authorise-every-rig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Re-authorise every rig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rebuild-host_vars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rebuild host_vars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-re-lock-the-old-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Re-lock the old key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handover-to-another-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handover to another person
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Handover to another person">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#handover-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handover checklist
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventing-all-of-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventing all of this
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../update_pis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Update all Pis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Day-to-day maintenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/repo_layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recorder app architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/file_formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/camera_notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camera notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Working on the code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/handover/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Handover checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-makes-a-dev-pi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What makes a dev Pi
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-old-machine-still-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration (old machine still works)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration (old machine still works)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-back-up-from-the-old-dev-pi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Back up from the old dev Pi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-set-up-the-new-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Set up the new machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-restore-the-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Restore the key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-clone-and-restore-host_vars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Clone and restore host_vars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-give-the-new-machine-a-static-ip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Give the new machine a static IP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-retire-the-old-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Retire the old machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recovery-old-machine-is-gone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recovery (old machine is gone)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recovery (old machine is gone)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-build-a-new-dev-pi-from-scratch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Build a new dev Pi from scratch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-authorise-the-new-key-on-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Authorise the new key on GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-clone-the-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Clone the repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-re-authorise-every-rig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Re-authorise every rig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rebuild-host_vars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rebuild host_vars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-re-lock-the-old-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Re-lock the old key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handover-to-another-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handover to another person
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Handover to another person">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#handover-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handover checklist
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preventing-all-of-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventing all of this
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="replace-or-migrate-the-dev-pi">Replace or migrate the dev Pi<a class="headerlink" href="#replace-or-migrate-the-dev-pi" title="Permanent link">&para;</a></h1>
+<p>The dev Pi holds two things that exist nowhere else: the <strong>SSH private key</strong>
+and the <strong><code>host_vars</code> files</strong>. Everything else is in Git.</p>
+<p>Whether this is a ten-minute job or an afternoon depends entirely on one
+question:</p>
+<div class="admonition question">
+<p class="admonition-title">Is the old dev Pi still readable?</p>
+<p><strong>Yes</strong> → <a href="#migration-old-machine-still-works">Migration</a>. Copy the key
+across and the rigs never know anything changed.</p>
+<p><strong>No</strong> → <a href="#recovery-old-machine-is-gone">Recovery</a>. You must generate a new
+key and re-authorise all eight rigs using their passwords.</p>
+</div>
+<p>Read <a href="#what-makes-a-dev-pi">what makes a dev Pi</a> first if you are unsure what
+needs to move.</p>
+<hr />
+<h2 id="what-makes-a-dev-pi">What makes a dev Pi<a class="headerlink" href="#what-makes-a-dev-pi" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Where it comes from</th>
+<th>Replaceable?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raspberry Pi OS, Git, Ansible</td>
+<td>Reinstall</td>
+<td>Trivially</td>
+</tr>
+<tr>
+<td>Repository clone</td>
+<td><code>git clone</code></td>
+<td>Trivially</td>
+</tr>
+<tr>
+<td><code>~/.ssh/insect_tracker</code></td>
+<td><strong>Generated once</strong></td>
+<td>Only by re-keying every rig</td>
+</tr>
+<tr>
+<td><code>ansible/host_vars/*.yml</code></td>
+<td><strong>Written by hand</strong></td>
+<td>Only by re-measuring every rig</td>
+</tr>
+<tr>
+<td><code>git config</code> identity</td>
+<td>Two commands</td>
+<td>Trivially</td>
+</tr>
+<tr>
+<td>Recorder app dependencies</td>
+<td>apt + pip</td>
+<td>Trivially</td>
+</tr>
+</tbody>
+</table>
+<p>Only rows three and four matter. They are the entire reason this page exists.</p>
+<div class="admonition note">
+<p class="admonition-title">There is nothing special about the machine</p>
+<p>"Dev Pi" is a role, not a configuration. Any machine with the key, the
+repo, and Ansible can manage the fleet — including a laptop. It does not
+even have to be a Raspberry Pi, though having one makes testing the
+recorder app against a real camera much easier.</p>
+</div>
+<hr />
+<h2 id="migration-old-machine-still-works">Migration (old machine still works)<a class="headerlink" href="#migration-old-machine-still-works" title="Permanent link">&para;</a></h2>
+<p>The good case. Roughly 30 minutes, most of it installation.</p>
+<h3 id="1-back-up-from-the-old-dev-pi">1. Back up from the old dev Pi<a class="headerlink" href="#1-back-up-from-the-old-dev-pi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/devpi_migration
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/insect_tracker<span class="w">      </span>~/devpi_migration/
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>~/.ssh/insect_tracker.pub<span class="w">  </span>~/devpi_migration/
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w"> </span>~/devpi_migration/
+</code></pre></div>
+<p>Copy <code>~/devpi_migration</code> to a USB stick — <strong>not</strong> into the repository, and not
+anywhere shared.</p>
+<p>Also note down, since they are not in any file:</p>
+<ul>
+<li>[ ] The router admin login</li>
+<li>[ ] The recording Pis' username and password</li>
+<li>[ ] Which physical rig is which <code>piN</code></li>
+</ul>
+<h3 id="2-set-up-the-new-machine">2. Set up the new machine<a class="headerlink" href="#2-set-up-the-new-machine" title="Permanent link">&para;</a></h3>
+<p>Follow <a href="../dev_pi/">Set up the dev Pi</a> steps 1, 2, 5 and 7 — flash the OS,
+install Git and Ansible, set the Git identity, install the app dependencies.</p>
+<p><strong>Skip steps 3 and 4</strong> (generating a key, adding it to GitHub). You are
+reusing the existing key rather than making a new one.</p>
+<h3 id="3-restore-the-key">3. Restore the key<a class="headerlink" href="#3-restore-the-key" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ssh
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/insect_tracker*<span class="w">  </span>~/.ssh/
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>chmod<span class="w"> </span><span class="m">700</span><span class="w"> </span>~/.ssh
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>~/.ssh/insect_tracker
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>~/.ssh/insect_tracker.pub
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">The permissions are not optional</p>
+<p>SSH silently refuses to use a private key that other users can read. If
+<code>chmod 600</code> is skipped, every connection fails with <code>Permission denied
+(publickey)</code> and nothing explains why.</p>
+</div>
+<p>Point SSH at it for GitHub:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>nano<span class="w"> </span>~/.ssh/config
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Host github.com
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    IdentityFile ~/.ssh/insect_tracker
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    User git
+</code></pre></div>
+<p>Test:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ssh<span class="w"> </span>-T<span class="w"> </span>git@github.com
+</code></pre></div>
+<p>A greeting with your username means the key works and GitHub still accepts it.</p>
+<h3 id="4-clone-and-restore-host_vars">4. Clone and restore host_vars<a class="headerlink" href="#4-clone-and-restore-host_vars" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/host_vars/*.yml<span class="w"> </span>~/RPi_recording/ansible/host_vars/
+</code></pre></div>
+<h3 id="5-verify">5. Verify<a class="headerlink" href="#5-verify" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ping<span class="w">          </span><span class="c1"># all rigs answer pong</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>ansible-playbook<span class="w"> </span>status.yml<span class="w">  </span><span class="c1"># full health check</span>
+</code></pre></div>
+<p>If every rig answers, the migration is done. The rigs are unaware anything
+changed — they authenticate the key, not the machine.</p>
+<h3 id="6-give-the-new-machine-a-static-ip">6. Give the new machine a static IP<a class="headerlink" href="#6-give-the-new-machine-a-static-ip" title="Permanent link">&para;</a></h3>
+<p>Reserve one in the router, as for any rig. Reusing the old dev Pi's address
+keeps things tidy.</p>
+<h3 id="7-retire-the-old-machine">7. Retire the old machine<a class="headerlink" href="#7-retire-the-old-machine" title="Permanent link">&para;</a></h3>
+<p>Once verified, <strong>wipe the old dev Pi rather than shelving it</strong>. It holds a
+private key granting access to every rig and write access to the repository.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>shred<span class="w"> </span>-u<span class="w"> </span>~/.ssh/insect_tracker
+</code></pre></div>
+<p>Then reflash the card if it is being reused.</p>
+<hr />
+<h2 id="recovery-old-machine-is-gone">Recovery (old machine is gone)<a class="headerlink" href="#recovery-old-machine-is-gone" title="Permanent link">&para;</a></h2>
+<p>The dev Pi died, the card is unreadable, and nobody backed up the key. Annoying
+but not serious — nothing is lost permanently, because the rigs can still be
+reached with their passwords.</p>
+<p>Budget an afternoon, mostly for step 4.</p>
+<h3 id="1-build-a-new-dev-pi-from-scratch">1. Build a new dev Pi from scratch<a class="headerlink" href="#1-build-a-new-dev-pi-from-scratch" title="Permanent link">&para;</a></h3>
+<p>Follow <a href="../dev_pi/">Set up the dev Pi</a> in full, <strong>including</strong> generating a new
+key. You now have a working machine with a key no rig recognises.</p>
+<h3 id="2-authorise-the-new-key-on-github">2. Authorise the new key on GitHub<a class="headerlink" href="#2-authorise-the-new-key-on-github" title="Permanent link">&para;</a></h3>
+<p>The old deploy key still sits in the repository settings, pointing at a machine
+that no longer exists.</p>
+<ol>
+<li><strong>GitHub → repository → Settings → Deploy keys</strong></li>
+<li>Delete the old key</li>
+<li>Add the new <code>~/.ssh/insect_tracker.pub</code>, <strong>with write access ticked</strong></li>
+</ol>
+<h3 id="3-clone-the-repository">3. Clone the repository<a class="headerlink" href="#3-clone-the-repository" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
+</code></pre></div>
+<p><code>inventory.ini</code> comes back with the clone, so you already know every rig's
+address.</p>
+<h3 id="4-re-authorise-every-rig">4. Re-authorise every rig<a class="headerlink" href="#4-re-authorise-every-rig" title="Permanent link">&para;</a></h3>
+<p>This is the slow part. Each rig must be told about the new key, using its
+password:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>ip<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">101</span><span class="w"> </span><span class="m">102</span><span class="w"> </span><span class="m">103</span><span class="w"> </span><span class="m">104</span><span class="w"> </span><span class="m">105</span><span class="w"> </span><span class="m">106</span><span class="w"> </span><span class="m">107</span><span class="w"> </span><span class="m">108</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/insect_tracker.pub<span class="w"> </span>acelab@192.168.1.<span class="nv">$ip</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">done</span>
+</code></pre></div>
+<p>You will be prompted for the password once per rig. Adjust the numbers to match
+your <code>inventory.ini</code>.</p>
+<p>Then verify:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ping
+</code></pre></div>
+<div class="admonition danger">
+<p class="admonition-title">If the rigs' password is also lost</p>
+<p>Then remote access is gone entirely and each rig must be handled physically:
+attach a keyboard and monitor and either add the key locally, or reflash the
+card and bootstrap it fresh.</p>
+<p>The recordings on the SD cards are still safe — this is an access problem,
+not a data problem.</p>
+</div>
+<h3 id="5-rebuild-host_vars">5. Rebuild host_vars<a class="headerlink" href="#5-rebuild-host_vars" title="Permanent link">&para;</a></h3>
+<p>These were never in Git, so they must be reconstructed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cp<span class="w"> </span>host_vars/template.yml<span class="w"> </span>host_vars/pi1.yml
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># repeat for each rig, then edit each one</span>
+</code></pre></div>
+<p>Two shortcuts before measuring anything by hand:</p>
+<p><strong>The rigs still have their deployed copy.</strong> <code>bootstrap.yml</code> wrote
+<code>config_unit.yaml</code> onto each Pi, and it survives:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;cat /home/acelab/RPi_recording/config_unit.yaml&quot;</span>
+</code></pre></div>
+<p>That gives you <code>unit_id</code>, arena dimensions and notes for every rig at once —
+usually everything you need.</p>
+<p><strong>Past recordings contain the scale.</strong> Any <code>_metadata.yaml</code> records the
+calibration in use at the time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">scale</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">px_per_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">63.38</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">frame_width_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">32.0</span>
+</code></pre></div>
+<h3 id="6-re-lock-the-old-key">6. Re-lock the old key<a class="headerlink" href="#6-re-lock-the-old-key" title="Permanent link">&para;</a></h3>
+<p>If the old dev Pi was lost rather than destroyed — stolen, or a card that might
+be readable by someone else — the old key should be treated as compromised.
+Removing its deploy key from GitHub (step 2) blocks repository access, but the
+rigs still trust it.</p>
+<p>To fully revoke it, on each rig remove the old key's line from
+<code>~/.ssh/authorized_keys</code>. With the new key working, Ansible can do this:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ansible.posix.authorized_key<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-a<span class="w"> </span><span class="s2">&quot;user=acelab state=absent key=&#39;</span><span class="k">$(</span>cat<span class="w"> </span>/path/to/old_key.pub<span class="k">)</span><span class="s2">&#39;&quot;</span>
+</code></pre></div>
+<p>If the old public key is also lost, edit <code>~/.ssh/authorized_keys</code> on each rig
+by hand and delete the unrecognised entry.</p>
+<hr />
+<h2 id="handover-to-another-person">Handover to another person<a class="headerlink" href="#handover-to-another-person" title="Permanent link">&para;</a></h2>
+<p>Migration and handover are the same operation with one decision added: <strong>does
+the new maintainer get the existing key, or their own?</strong></p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Their own key (recommended)</label><label for="__tabbed_1_2">Share the existing key</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Cleaner, and revocable independently.</p>
+<ol>
+<li>They follow <a href="../dev_pi/">Set up the dev Pi</a> in full on their own machine</li>
+<li>Add their public key to GitHub as a <strong>second</strong> deploy key</li>
+<li><code>ssh-copy-id</code> their key to each rig — rigs accept any number of keys</li>
+<li>You send them your <code>host_vars</code> files (these are not secret, just
+   unversioned)</li>
+</ol>
+<p>Both dev Pis now work simultaneously. When you leave, your key is removed
+from GitHub and from the rigs' <code>authorized_keys</code>, and theirs keeps working.</p>
+<p>Worth doing even for a temporary overlap: it means the handover can be
+tested while you are still around to fix it.</p>
+</div>
+<div class="tabbed-block">
+<p>Faster, but the key cannot then be revoked without re-keying everything.</p>
+<p>Follow <a href="#migration-old-machine-still-works">Migration</a>, copying the key to
+their machine. Reasonable for a permanent handover where you are leaving
+anyway, poor for a temporary or partial one.</p>
+</div>
+</div>
+</div>
+<h3 id="handover-checklist">Handover checklist<a class="headerlink" href="#handover-checklist" title="Permanent link">&para;</a></h3>
+<p>Beyond the files, walk through:</p>
+<ul>
+<li>[ ] Run <code>ansible-playbook status.yml</code> together, so they see healthy output</li>
+<li>[ ] Make a trivial change, push it, run <code>update.yml</code> — the whole chain, while
+      nothing is at stake</li>
+<li>[ ] Walk the rigs physically, matching each to its <code>piN</code> name</li>
+<li>[ ] Do one real recording end to end</li>
+<li>[ ] Hand over the router login and the rigs' password</li>
+<li>[ ] Point them at the <a href="../../reference/handover/">handover checklist</a>, which
+      covers the knowledge rather than the mechanics</li>
+</ul>
+<hr />
+<h2 id="preventing-all-of-this">Preventing all of this<a class="headerlink" href="#preventing-all-of-this" title="Permanent link">&para;</a></h2>
+<p>Two commands, occasionally:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/devpi_backup
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>cp<span class="w"> </span>~/.ssh/insect_tracker*<span class="w"> </span>~/RPi_recording/ansible/host_vars/*.yml<span class="w"> </span>~/devpi_backup/
+</code></pre></div>
+<p>Copy that folder somewhere off the Pi — institutional storage, an encrypted USB
+stick, anywhere that is not the machine it protects against losing.</p>
+<p>With that backup, replacing a dead dev Pi is the 30-minute
+<a href="#migration-old-machine-still-works">migration</a> rather than the afternoon-long
+<a href="#recovery-old-machine-is-gone">recovery</a>.</p>
+<div class="admonition danger">
+<p class="admonition-title">Do not commit the private key</p>
+<p><code>~/.ssh/insect_tracker</code> grants access to every rig and write access to the
+repository. It must never go into Git, not even a private repository —
+Git history is very hard to purge, and a repository's audience tends to
+grow over time.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "content.code.copy", "content.code.annotate", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -838,6 +838,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../replace_dev_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replace the dev Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../update_pis/" class="md-nav__link">
         
   
@@ -1259,6 +1287,13 @@
 </ol>
 <p>Breaking rule 2 is the usual way fleets drift apart. A fix made directly on
 rig 3 exists only on rig 3, and will be silently overwritten at the next update.</p>
+<div class="admonition warning">
+<p class="admonition-title">The dev Pi is the single point of failure</p>
+<p>It holds the SSH key and the <code>host_vars</code> files, and neither is in Git. With
+a backup, replacing it takes half an hour; without one, it takes an
+afternoon and every rig must be re-keyed by hand. See
+<a href="../replace_dev_pi/">Replace the dev Pi</a>.</p>
+</div>
 <hr />
 <h2 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h2>
 <table>
@@ -1284,6 +1319,11 @@ rig 3 exists only on rig 3, and will be silently overwritten at the next update.
 <td>Push a software update</td>
 <td>Whenever code changes</td>
 <td><a href="../update_pis/">Update all Pis</a></td>
+</tr>
+<tr>
+<td>Replace or hand over the dev Pi</td>
+<td>On upgrade, failure, or handover</td>
+<td><a href="../replace_dev_pi/">Replace the dev Pi</a></td>
 </tr>
 <tr>
 <td>Routine checks and fixes</td>
