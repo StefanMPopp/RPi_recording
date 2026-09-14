@@ -13,7 +13,9 @@ Config hierarchy:
 from pathlib import Path
 import yaml
 
-from constants import DEFAULT_CONFIG_PATH, METADATA_DEFAULTS
+from constants import (
+    DEFAULT_CONFIG_PATH, DEFAULT_SAVE_DIR, METADATA_DEFAULTS, DEFAULT_FIELD_ORDER,
+)
 
 
 # =============================================================================
@@ -50,8 +52,12 @@ def _default_app_config() -> dict:
             "sd_write_speed_measured_date": None,
         },
         "app": {
-            "save_dir":     "/home/pi/Projects",
+            "save_dir":     DEFAULT_SAVE_DIR,
             "show_preview": True,
+            # File naming: include treatment NAMES alongside values?
+            #   False -> foraging_high-dim_3
+            #   True  -> foraging_density-high-light-dim_3
+            "include_treatment_names": False,
         },
     }
 
@@ -77,10 +83,11 @@ def default_profile() -> dict:
     """Return a profile dict populated with sensible defaults."""
     return {
         "recording": {
-            "save_dir":        "/home/pi/Projects",
+            "save_dir":        DEFAULT_SAVE_DIR,
             "output_format":   "MJPEG video (.avi)",
             "duration_s":      None,          # None = record until stopped
             "base_name":       "recording",
+            "auto_file_name":  True,      # build the name from metadata
             "folder_name":     "images",      # used for image stack mode only
         },
         "camera": {
@@ -88,7 +95,12 @@ def default_profile() -> dict:
             "fps":             None,          # None = use sensor mode maximum
             "colour_mode":     "Greyscale",   # "Greyscale" or "Colour"
         },
-        "metadata": {**METADATA_DEFAULTS, "px_per_cm": None},
+        "metadata": {
+            **METADATA_DEFAULTS,
+            "treatments":     {},     # {name: value}, any number
+            "field_order":    list(DEFAULT_FIELD_ORDER),
+            "px_per_cm":      None,
+        },
     }
 
 

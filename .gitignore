@@ -18,3 +18,12 @@ ansible/host_vars/*.yml
 
 # MkDocs build output
 site/
+# ── Add these lines to .gitignore in the repo root ────────────────────────────
+
+# Per-rig Ansible config — hardware-specific, exists only on the dev Pi.
+# Back these up separately; they are not recoverable from GitHub.
+ansible/host_vars/*.yml
+!ansible/host_vars/template.yml
+
+# Ansible runtime files
+ansible/*.retry

@@ -1,158 +1,203 @@
-# Step 1: Set up the dev Pi
+# Set up the dev Pi
 
 !!! warning "One-time setup — most people can skip this page"
-    This page is only needed when setting up the dev Pi for the first time, or rebuilding it
-    from scratch. If the dev Pi is already running and the Manager app is accessible,
-    go directly to [Add a new Pi](add_pi.md).
+    Only needed when building the dev Pi for the first time. If it already
+    works, go to [Add a new Pi](add_pi.md).
 
-The dev Pi is the central machine for managing the fleet. It runs the Manager app, holds the
-Ansible configuration, and is the only machine from which code changes are pushed.
+    **Replacing an existing dev Pi?** Use
+    [Replace the dev Pi](replace_dev_pi.md) instead. Following this page
+    would generate a new SSH key that none of the rigs recognise.
 
-This setup is done **manually** — there is no app to help, because the app itself lives on
-the dev Pi and does not exist yet at this stage.
+The dev Pi is where code is written and from where all rigs are updated. It is
+the only machine that pushes to GitHub.
+
+This setup is manual, because the tooling that automates everything else lives
+on this machine and does not exist yet at this point.
 
 ---
 
 ## What you need
 
-- Raspberry Pi 4 with SD card (≥ 32 GB, U30 rated)
-- A computer with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) installed
-- The dev Pi connected to the same network as the recording Pis
-- A GitHub account and a private repo named `RPi_recording`
+- A Raspberry Pi 4 and SD card (32 GB or more)
+- [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on any computer
+- A GitHub account with access to the `RPi_recording` repository
+- The Pi on the same network as the rigs
 
 ---
 
-## 1. Flash the dev Pi
+## 1. Flash the OS
 
-1. Open Raspberry Pi Imager on your computer.
-2. Select **Raspberry Pi OS (64-bit)** as the operating system.
-3. Select your SD card.
-4. Click the **gear icon** (advanced options) and set:
-    - Hostname: `devpi`
-    - Enable SSH: **checked** (use password authentication for now)
-    - Username: `pi`
-    - Set a password you will remember
-    - Configure your Wi-Fi network if not using ethernet
-5. Flash the card and insert it into the dev Pi.
+1. Open Raspberry Pi Imager
+2. OS: **Raspberry Pi OS (64-bit)** — the full desktop version
+3. Select the SD card
+4. Open **advanced options** (gear icon) and set:
+     - Hostname: `devpi`
+     - **Enable SSH**, with password authentication
+     - Username and password — note them down
+     - Wi-Fi, if not using ethernet
+5. Flash, insert, boot
 
 ---
 
 ## 2. Install Git and Ansible
-
-Open a terminal on the dev Pi (or SSH into it) and run:
 
 ```bash
 sudo apt update
 sudo apt install -y git ansible
 ```
 
-`apt` is the Pi's built-in package installer. This installs:
-
-- **Git** — version control tool for syncing code with GitHub
-- **Ansible** — automation tool that manages the other Pis over the network
+- **Git** — version control, syncs code with GitHub
+- **Ansible** — runs commands on all rigs over SSH
 
 ---
 
 ## 3. Generate an SSH key
 
-An SSH key is a pair of files that lets the dev Pi connect to GitHub and to all other Pis
-without typing a password each time. Generate one with:
+An SSH key lets this Pi connect to GitHub and to the rigs without typing a
+password each time.
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/rig_recording
+ssh-keygen -t ed25519 -f ~/.ssh/insect_tracker
 ```
 
-Press Enter at both prompts to leave the passphrase empty. Two files are created:
+Press ++enter++ at both prompts for no passphrase. Two files appear:
 
-- `~/.ssh/rig_recording` — the **private key** (never share this)
-- `~/.ssh/rig_recording.pub` — the **public key** (safe to share)
+| File | Role |
+|---|---|
+| `~/.ssh/insect_tracker` | **Private key** — never leaves this Pi |
+| `~/.ssh/insect_tracker.pub` | **Public key** — safe to copy anywhere |
 
+Tell SSH to use it for GitHub:
 
-Tell SSH which key to use for GitHub
 ```bash
 nano ~/.ssh/config
 ```
 
-Add these lines exactly:
-```bash
+Add:
+
+```
 Host github.com
-    IdentityFile ~/.ssh/rig_recording
+    IdentityFile ~/.ssh/insect_tracker
     User git
 ```
-Save with `Ctrl+O`, Enter, then `Ctrl+X`.
-Test the connection:
+
+Save with ++ctrl+o++, ++enter++, then ++ctrl+x++.
+
+---
+
+## 4. Give GitHub the public key
+
+```bash
+cat ~/.ssh/insect_tracker.pub
+```
+
+Copy the whole line, then on GitHub:
+
+**Repository → Settings → Deploy keys → Add deploy key**
+
+- Title: `devpi`
+- Key: paste it
+- **Tick "Allow write access"** — the dev Pi must push, not only pull
+
+Test it:
+
 ```bash
 ssh -T git@github.com
 ```
-You should see: `Hi StefanMPopp! You've successfully authenticated...`
+
+You should see a greeting with your username. `Permission denied (publickey)`
+means the key was not accepted — check the `~/.ssh/config` above and that the
+deploy key was saved.
 
 ---
 
-## 4. Add the public key to GitHub
+## 5. Set your Git identity
 
-GitHub needs the public key so that the dev Pi (and later, all other Pis) can pull code
-without a password.
+```bash
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
+git config --global pull.rebase false
+```
 
-1. Print the public key:
-    ```bash
-    cat ~/.ssh/rig_recording.pub
-    ```
-2. Copy the entire output (one long line starting with `ssh-ed25519`).
-3. On GitHub: go to your `RPi_recording` repo → **Settings** → **Deploy keys** → **Add deploy key**.
-4. Paste the key, give it a name (e.g. `devpi`), and save.
+Without the first two, commits are refused. The third sets merge as the default
+strategy so `git pull` does not stop to ask.
 
 ---
 
-## 5. Clone the repository
-
-Download the repository to the dev Pi:
+## 6. Clone the repository
 
 ```bash
 git clone git@github.com:StefanMPopp/RPi_recording.git ~/RPi_recording
 ```
 
-This creates a folder at `~/RPi_recording` containing all project code. This is where you
-will work and from which all changes are pushed to GitHub.
+---
+
+## 7. Install the recorder app's dependencies
+
+Even on the dev Pi, so it can be tested locally:
+
+```bash
+sudo apt install -y python3-pyqt6 python3-picamera2 python3-opencv
+pip install pyyaml --break-system-packages
+```
+
+!!! note "Why apt rather than pip for the big three"
+    `picamera2` needs system libraries pip cannot supply; `PyQt6` and `opencv`
+    have prebuilt ARM packages in apt that avoid a very long compile. Only
+    `pyyaml` comes from pip.
+
+    `--break-system-packages` is required on Raspberry Pi OS and is harmless
+    here — it bypasses a warning aimed at protecting system Python.
+
+Check it runs:
+
+```bash
+cd ~/RPi_recording
+python3 recorder_app/main.py
+```
 
 ---
 
-## 6. Make these wiki pages
+## 8. Install the wiki tooling (optional)
 
-To get it running locally on the dev Pi:
+To edit and publish these pages:
+
 ```bash
 pip install mkdocs mkdocs-material --break-system-packages
-cd ~/RPi_recording
-mkdocs serve
-# then open http://localhost:8000 in a browser
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
-or `python3 -m -mkdocs serve` if the above throws an error
 
-To publish to GitHub Pages (gives you the public URL):
+Preview locally:
+
+```bash
+cd ~/RPi_recording/wiki
+mkdocs serve      # then open http://localhost:8000
+```
+
+Publish:
+
 ```bash
 mkdocs gh-deploy
 ```
 
-1. Go to `github.com/StefanMPopp/RPi_recording`
-2. Settings → Pages (left sidebar)
-3. Under Source, select branch `gh-pages`, folder `/ (root)`
-4. Save
+!!! info "How gh-deploy works"
+    It builds the site and pushes it to a separate `gh-pages` branch. **Do not
+    merge that branch into `main`** — it holds generated HTML, not source. Your
+    Markdown lives on `main`; `gh-pages` is managed entirely by MkDocs.
 
-After a minute, your wiki will be live at: `https://stefanmpopp.github.io/RPi_recording/`
-
-From now on, to update the wiki after editing the .md files, run mkdocs gh-deploy again from ~/RPi_recording
+    Enable it once under **GitHub → Settings → Pages**, source `gh-pages`,
+    folder `/ (root)`.
 
 ---
 
-## 7. Install the Manager app
+## 9. Set a static IP
 
-```bash
-cd ~/RPi_recording
-pip install -r app/manager/requirements.txt --break-system-packages
-```
+Reserve an address for the dev Pi in your router's admin panel, the same way as
+for the rigs. Suggested: `192.168.1.100`.
 
 ---
 
 ## Done
 
-The dev Pi is now ready. Proceed to [Add a new Pi](add_pi.md) to bring the first recording
-Pi into the fleet.
+Now [add your first recording Pi](add_pi.md).

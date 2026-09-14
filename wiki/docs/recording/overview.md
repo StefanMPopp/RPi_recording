@@ -1,40 +1,64 @@
 # Recording overview
 
-This section covers everything needed to run a recording session using the
-**Recorder app** — a lightweight interface accessible from any browser on the same network
-as the recording Pis.
+Everything on this page and the ones below it is for **running experiments**.
+No terminal use, no Git, no Ansible.
 
 ---
 
-## The Recorder app
+## The short version
 
-Each deployed Pi runs the Recorder app automatically on boot. You do not need to install,
-update, or configure it — that is handled by the Manager app.
+1. Power on the rig and its lights, put the arena in place
+2. Open the **recorder app** on the rig's monitor
+3. Check focus using the preview (++ctrl++ + scroll to zoom in)
+4. Fill in the metadata, or load a list of planned sessions from a CSV
+5. Choose resolution, framerate, colour mode and format
+6. Press **Start recording**
+7. Press ++q++ or **Stop recording** when finished
 
-To access a rig's Recorder app, open a browser on your analysis machine and go to:
+The file name is built automatically from the metadata, so two recordings never
+silently overwrite one another as long as their metadata differs.
+
+---
+
+## What gets saved
+
+For a **video** recording, in your chosen save folder:
 
 ```
-http://pi1.local:8080   # replace pi1 with the hostname of the rig you want
+foraging_high-dim_1.avi              ← the footage
+foraging_high-dim_1_metadata.yaml    ← everything about it
 ```
 
-!!! note
-    Your analysis machine must be on the same Wi-Fi or ethernet network as the Pis.
+For an **image stack**:
+
+```
+foraging_high-dim_1/
+    foraging_high-dim_1_00001.tiff
+    foraging_high-dim_1_00002.tiff
+    ...
+    metadata.yaml
+```
+
+Frame numbers are 1-based and zero-padded to five digits, so they sort correctly
+in any file browser or analysis script.
 
 ---
 
-## What the Recorder app does
+## The pages in this section
 
-1. Accepts recording parameters (arena dimensions, species, experimenter, etc.)
-2. Starts and stops the camera recording
-3. Saves video files to a timestamped folder on the Pi
-4. Transfers completed recordings to your analysis machine
+| Page | Read it when |
+|---|---|
+| [Before you start](before_you_start.md) | Setting up a rig for a session — focus, lighting, scale |
+| [The recorder app](recorder_app.md) | Learning what each field does |
+| [Metadata lists](metadata_lists.md) | You have many planned trials and little time between them |
+| [Choosing settings](choosing_settings.md) | Deciding resolution, framerate and format for your experiment |
+| [Troubleshooting](troubleshooting.md) | Something is not working |
 
 ---
 
-## Before your first session
-
-- Confirm the Pi is powered on and the LED panels are running
-- Check the camera view and focus in the Recorder app's live preview
-- Fill in the experiment config for this session
-
-→ See [Run a recording session](record.md) for the full walkthrough.
+!!! tip "The single most common mistake"
+    Recording in **colour** when greyscale would do. Greyscale files are about
+    three times smaller for image stacks and roughly 2.5× smaller for MJPEG,
+    and tracking algorithms work on brightness anyway. Use colour only if the
+    analysis actually needs hue — for example telling apart colour-marked
+    individuals.

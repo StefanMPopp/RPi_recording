@@ -1,91 +1,87 @@
-# Step 2: Add a new Pi
+# Add a new Pi
 
-This page covers everything needed to bring a new recording Pi into the fleet — from a
-blank SD card to a fully configured rig ready to record.
+From a blank SD card to a working rig. Budget about 30 minutes, most of it
+waiting for downloads.
 
-The process has two parts:
-
-1. **Manual preparation** — flash the Pi, assign it a static IP, and copy the SSH key.
-   This requires physical access to the Pi and your router.
-2. **Bootstrapping via the Manager app** — installs all software on the Pi automatically.
+Two parts: **manual preparation** needing physical access, then
+**bootstrapping**, which is automatic.
 
 ---
 
 ## Part 1 — Manual preparation
 
-### 1.1 Flash the Pi
+### 1.1 Flash the OS
 
-1. Open Raspberry Pi Imager on any computer.
-2. Select **Raspberry Pi OS Lite (64-bit)** — the Lite version has no desktop, which saves
-   resources on a Pi that only records video.
-3. Select your SD card.
-4. Click the **gear icon** and set:
-    - Hostname: `pi1` (increment for each new Pi: `pi2`, `pi3` …)
-    - Enable SSH: **checked**
-    - Username: `pi`
-    - Same password as the dev Pi
-    - Configure Wi-Fi if not using ethernet
-5. Flash and insert the card.
+1. Open Raspberry Pi Imager
+2. OS: **Raspberry Pi OS (64-bit)** — the desktop version, because the recorder
+   app is graphical
+3. Advanced options (gear icon):
+     - Hostname: `pi1`, `pi2`, … — unique per rig
+     - **Enable SSH**
+     - Same username and password as the other rigs, for consistency
+     - Wi-Fi if not using ethernet
+4. Flash, insert, boot
 
----
+### 1.2 Enable the camera
 
-### 1.2 Assign a static IP address
-
-A static IP means the Pi always has the same network address. Ansible needs this to find
-each Pi reliably.
-
-1. Power on the Pi and let it connect to the network (give it ~60 seconds).
-2. Log into your **router's admin panel** (usually at `192.168.1.1` or `192.168.0.1` in a browser).
-3. Find the Pi in the connected devices list — it will appear as `pi1` (or the hostname you set).
-4. Assign it a reserved/static IP. Suggested scheme:
-
-    | Pi | Hostname | Static IP |
-    |---|---|---|
-    | Dev Pi | `devpi` | `192.168.1.100` |
-    | Pi 1 | `pi1` | `192.168.1.101` |
-    | Pi 2 | `pi2` | `192.168.1.102` |
-    | … | … | … |
-
-5. Save and restart the router if prompted.
-
----
-
-### 1.3 Copy the SSH key to the new Pi
-
-Run this from the dev Pi terminal, replacing the IP with the one you just assigned:
+The HQ camera normally works out of the box on current Raspberry Pi OS. Confirm:
 
 ```bash
-ssh-copy-id -i ~/.ssh/insect_tracker.pub pi@192.168.1.101
+libcamera-hello --list-cameras
 ```
 
-You will be prompted for the Pi's password once. After that, the dev Pi can connect
-without a password — which is what Ansible needs.
+If the IMX477 is not listed, check the ribbon cable at both ends before
+anything else.
 
-Verify it worked:
+### 1.3 Assign a static IP
+
+Ansible finds each Pi by address, so it must not change.
+
+1. Let the Pi connect and wait a minute
+2. Open your router's admin panel (usually `192.168.1.1`)
+3. Find the Pi by its hostname
+4. Reserve an address for it
+
+Suggested scheme:
+
+| Machine | Hostname | IP |
+|---|---|---|
+| Dev Pi | `devpi` | `192.168.1.100` |
+| Rig 1 | `pi1` | `192.168.1.101` |
+| Rig 2 | `pi2` | `192.168.1.102` |
+| … | … | … |
+
+### 1.4 Copy the SSH key
+
+From the **dev Pi**, with the new rig's address:
 
 ```bash
-ssh -i ~/.ssh/insect_tracker pi@192.168.1.101
+ssh-copy-id -i ~/.ssh/insect_tracker.pub USERNAME@192.168.1.102
 ```
 
-You should land directly in a terminal on the new Pi. Type `exit` to return.
+You will be asked for the rig's password once. Verify:
 
----
+```bash
+ssh -i ~/.ssh/insect_tracker USERNAME@192.168.1.102
+```
 
-### 1.4 Add the Pi to the inventory file
+You should land in a terminal on the new Pi. Type `exit` to return.
 
-On the dev Pi, open `~/RPi_recording/ansible/inventory.ini` and add a line for the new Pi:
+### 1.5 Add it to the inventory
+
+On the dev Pi, edit `~/RPi_recording/ansible/inventory.ini`:
 
 ```ini
 [pis]
 pi1 ansible_host=192.168.1.101
-pi2 ansible_host=192.168.1.102   # add new lines here
+pi2 ansible_host=192.168.1.102    # ← new line
 
 [pis:vars]
-ansible_user=pi
+ansible_user=USERNAME
 ansible_ssh_private_key_file=~/.ssh/insect_tracker
 ```
 
-Save the file, then commit and push the change:
+Then commit it — the inventory is part of the project record:
 
 ```bash
 cd ~/RPi_recording
@@ -94,57 +90,106 @@ git commit -m "add pi2 to inventory"
 git push
 ```
 
----
+### 1.6 Create its unit config
 
-### 1.5 Create the unit config for the new Pi
-
-Each Pi has a small config file with its hardware-specific values. Create one for the new Pi:
+Each rig has hardware-specific values that must not be shared:
 
 ```bash
-cp ~/RPi_recording/ansible/host_vars/template.yml \
-   ~/RPi_recording/ansible/host_vars/pi2.yml
+cp ansible/host_vars/template.yml ansible/host_vars/pi2.yml
+nano ansible/host_vars/pi2.yml
 ```
-
-Open `pi2.yml` and fill in the values for this rig:
 
 ```yaml
 unit_id: pi2
 arena_width_cm: 30
 arena_height_cm: 20
-lens_calibration_file: calib_pi2.json   # generated during camera calibration
+notes: "bench 2, north window"
 ```
 
-!!! note
-    `host_vars/` is listed in `.gitignore` — these files are never committed to GitHub,
-    because they contain hardware-specific values that differ between units.
+!!! note "These files are not committed"
+    `ansible/host_vars/*.yml` is in `.gitignore` because the values differ per
+    machine. Only `template.yml` is tracked. Keep a backup of these files
+    somewhere outside the repo — see the
+    [handover checklist](../reference/handover.md).
 
 ---
 
-## Part 2 — Bootstrap via the Manager app
+## Part 2 — Bootstrap
 
-Once Part 1 is complete, open the **Manager app** on the dev Pi and use the
-**Add new Pi** button, selecting the Pi you just added. The app will:
-
-1. Install system packages (`git`, `python3-venv`, `ffmpeg`, `libcamera-tools`)
-2. Clone the repository onto the Pi
-3. Create a Python virtual environment and install all dependencies
-4. Deploy the unit config file
-
-This takes 2–5 minutes. The app shows live progress and reports any errors.
-
-!!! tip "Adding multiple Pis at once"
-    Complete Part 1 for all new Pis first (flash, static IP, SSH key, inventory entry,
-    unit config), then run bootstrapping once — it targets all unconfigured Pis in one pass.
-
----
-
-## Verify
-
-After bootstrapping, confirm the new Pi is healthy:
+Installs everything the rig needs. Run from the dev Pi:
 
 ```bash
-ansible pis -i ~/RPi_recording/ansible/inventory.ini -m ping
+cd ~/RPi_recording/ansible
+ansible-playbook -i inventory.ini bootstrap.yml --limit pi2
 ```
 
-All Pis in the inventory should respond with `pong`. If the new Pi does not respond,
-re-check the static IP and SSH key steps.
+Drop `--limit pi2` to bootstrap every Pi in the inventory. The playbook is
+**idempotent** — running it on an already-configured Pi is safe and skips
+whatever is already correct.
+
+It will:
+
+1. Install system packages — `git`, `python3-pyqt6`, `python3-picamera2`,
+   `python3-opencv`, `ffmpeg`
+2. Clone the repository to the Pi
+3. Install the Python dependencies
+4. Deploy the unit config from `host_vars/`
+
+Expect 2–5 minutes on a fresh Pi, mostly downloading.
+
+---
+
+## Part 3 — Verify
+
+```bash
+ansible pis -i inventory.ini -m ping
+```
+
+Every Pi should answer `pong`.
+
+Then on the rig itself, with its monitor attached:
+
+```bash
+cd ~/RPi_recording
+python3 recorder_app/main.py
+```
+
+Check:
+
+- [ ] The app opens
+- [ ] The preview shows a live image
+- [ ] The sensor mode dropdown lists the IMX477 modes
+- [ ] **Settings → Recalibrate write speed** completes and gives a plausible
+      figure (20–90 MB/s for a U30 card)
+- [ ] A 10-second test recording produces a file and a metadata file, with no
+      dropped frames
+
+The write speed calibration is **per Pi** — it measures that particular SD card
+and is stored in `config_app.yaml`, which is not shared between machines.
+
+---
+
+## Adding several Pis at once
+
+Do Part 1 for all of them, then bootstrap in one pass:
+
+```bash
+ansible-playbook -i inventory.ini bootstrap.yml
+```
+
+Ansible works on all hosts in parallel, so ten Pis take about as long as one.
+
+---
+
+## If something fails
+
+Ansible names the failing task and host. Common causes:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `UNREACHABLE` | Pi off, wrong IP, or key not copied | Repeat 1.3 and 1.4 |
+| `Permission denied` | SSH key missing | Repeat 1.4 |
+| apt task fails | No internet on the Pi | Check its network |
+| Repo clone fails | Deploy key missing | See [dev Pi setup](dev_pi.md#4-give-github-the-public-key) |
+
+Fix and re-run — completed steps are skipped.

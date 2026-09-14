@@ -1,0 +1,34 @@
+# =============================================================================
+# group_vars/pis.yml — settings shared by every recording Pi
+# =============================================================================
+#
+# Values here apply to all Pis. Anything that differs between rigs belongs in
+# host_vars/<pi_name>.yml instead.
+#
+# Ansible loads this automatically for hosts in the [pis] group; it does not
+# need to be referenced anywhere.
+
+# ── Repository ────────────────────────────────────────────────────────────────
+repo_url:    "git@github.com:StefanMPopp/RPi_recording.git"
+repo_branch: "main"
+repo_dir:    "/home/{{ ansible_user }}/RPi_recording"
+
+# ── Where recordings are written ──────────────────────────────────────────────
+projects_dir: "/home/{{ ansible_user }}/Projects"
+
+# ── System packages ───────────────────────────────────────────────────────────
+# Installed with apt rather than pip because:
+#   picamera2      needs system libraries pip cannot supply
+#   pyqt6, opencv  have prebuilt ARM packages; pip would compile from source
+#                  for a very long time on a Pi
+# Add new system-level dependencies here, then re-run bootstrap.yml.
+system_packages:
+  - git
+  - python3-pip
+  - python3-yaml
+  - python3-pyqt6
+  - python3-picamera2
+  - python3-opencv
+  - python3-numpy
+  - ffmpeg
+  - rsync

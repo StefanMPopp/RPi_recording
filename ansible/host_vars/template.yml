@@ -1,0 +1,29 @@
+# =============================================================================
+# host_vars template — copy to <pi_name>.yml for each rig
+# =============================================================================
+#
+#   cp host_vars/template.yml host_vars/pi2.yml
+#   nano host_vars/pi2.yml
+#
+# The file name must match the host name in inventory.ini exactly.
+#
+# These files are NOT committed (see .gitignore) because the values describe
+# one physical rig. Only this template is tracked.
+#
+# Back these up somewhere outside the repo — they exist nowhere else.
+# See the wiki: Developer reference → Handover checklist.
+
+# ── Identity ──────────────────────────────────────────────────────────────────
+unit_id: "piN"                 # must match the inventory name
+
+# ── Arena ─────────────────────────────────────────────────────────────────────
+# Physical dimensions of the recording arena for this rig, in centimetres.
+# Used as a starting point for spatial calibration; the experimenter still
+# confirms the scale in the app, since the exact framing can shift.
+arena_width_cm:  30
+arena_height_cm: 20
+
+# ── Notes ─────────────────────────────────────────────────────────────────────
+# Free text. Useful for anything that would otherwise live only in someone's
+# memory: where the rig is, which camera body it has, known quirks.
+notes: ""

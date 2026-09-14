@@ -1,0 +1,7 @@
+experimenter,experiment,ant_id,trial,density,light
+SP,foraging,A01,1,high,dim
+SP,foraging,A01,2,high,bright
+SP,foraging,A02,1,low,dim
+SP,foraging,A02,2,low,bright
+SP,recruitment,B01,1,high,dim
+SP,recruitment,B02,1,low,dim

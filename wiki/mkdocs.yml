@@ -1,7 +1,7 @@
-site_name: RPi Recording — Field Guide
-site_description: Setup, maintenance, and recording guide for the insect video tracking rigs
-site_url: https://yourusername.github.io/RPi_recording/
-repo_url: https://github.com/yourusername/RPi_recording
+site_name: RPi Recording
+site_description: Setup, recording, and maintenance guide for the insect video recording rigs
+site_url: https://stefanmpopp.github.io/RPi_recording/
+repo_url: https://github.com/StefanMPopp/RPi_recording
 repo_name: RPi_recording
 
 theme:
@@ -20,35 +20,52 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.tabs           # top-level sections as tabs
-    - navigation.tabs.sticky    # tabs stay visible while scrolling
-    - navigation.sections       # expand sections in sidebar
-    - navigation.top            # back-to-top button
-    - content.code.copy         # copy button on all code blocks
-    - content.code.annotate     # inline code annotations
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.highlight
 
 markdown_extensions:
-  - admonition                  # coloured callout boxes (warning, note, tip)
-  - pymdownx.details            # collapsible sections
-  - pymdownx.superfences        # code blocks inside admonitions
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.tabbed:
-      alternate_style: true     # tabbed content blocks
-  - attr_list                   # add CSS classes to elements
-  - md_in_html                  # markdown inside HTML blocks
+      alternate_style: true
+  - pymdownx.keys
+  - attr_list
+  - md_in_html
   - tables
+  - footnotes
   - toc:
-      permalink: true           # anchor links on headings
+      permalink: true
 
 nav:
   - Home: index.md
-  - Setup & maintenance:
-    - Overview: setup/overview.md
-    - "Step 1: Set up the dev Pi": setup/dev_pi.md
-    - "Step 2: Add a new Pi": setup/add_pi.md
-    - "Step 3: Update Pis": setup/update_pis.md
   - Recording:
     - Overview: recording/overview.md
-    - Run a recording session: recording/record.md
+    - Before you start: recording/before_you_start.md
+    - The recorder app: recording/recorder_app.md
+    - Metadata lists: recording/metadata_lists.md
+    - Choosing settings: recording/choosing_settings.md
+    - Troubleshooting: recording/troubleshooting.md
+  - Setup & maintenance:
+    - Overview: setup/overview.md
+    - Set up the dev Pi: setup/dev_pi.md
+    - Add a new Pi: setup/add_pi.md
+    - Replace the dev Pi: setup/replace_dev_pi.md
+    - Update all Pis: setup/update_pis.md
+    - Day-to-day maintenance: setup/maintenance.md
+  - Developer reference:
+    - Overview: reference/overview.md
+    - Repository layout: reference/repo_layout.md
+    - Recorder app architecture: reference/architecture.md
+    - File formats: reference/file_formats.md
+    - Camera notes: reference/camera_notes.md
+    - Working on the code: reference/development.md
+    - Handover checklist: reference/handover.md

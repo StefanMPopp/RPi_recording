@@ -1,0 +1,120 @@
+# =============================================================================
+# update.yml — push the latest code to every recording Pi
+# =============================================================================
+#
+#     ansible-playbook -i inventory.ini update.yml               # all Pis
+#     ansible-playbook -i inventory.ini update.yml --limit pi3   # one Pi
+#
+# Run AFTER pushing to GitHub. This playbook tells each Pi to pull; it does not
+# push anything itself. Pushing without running this leaves the rigs behind.
+#
+# Deliberately does NOT install system packages — that keeps routine updates
+# fast. If a change needs a new apt package, add it to group_vars/pis.yml and
+# run bootstrap.yml instead.
+#
+# The Pis need only be powered on and on the network. No login, no keyboard.
+# They must not be recording, since the files would change under a running app.
+
+- name: Update recording Pis
+  hosts: pis
+  gather_facts: false
+
+  tasks:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Safety check — never update a Pi mid-recording
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Matches only real python processes running main.py. A bare
+    # `pgrep -f recorder_app/main.py` also matches the shell Ansible spawns to
+    # run the check, because the pattern appears in that command line — so it
+    # would report the app as running on every single update.
+    - name: Check whether the recorder app is running
+      ansible.builtin.shell:
+        cmd: pgrep -f "^(/usr/bin/)?python3? .*recorder_app/main\.py" || true
+      register: app_running
+      changed_when: false
+      tags: [preflight]
+
+    - name: Warn if the app is running
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: the recorder app is running on {{ inventory_hostname }}.
+          The update will proceed, but the app must be restarted before the
+          new code takes effect. If a recording is in progress, stop now
+          (Ctrl-C) and update this Pi later.
+      when: app_running.stdout | length > 0
+      tags: [preflight]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Record the current state, so the summary can show what changed
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Get the commit before updating
+      ansible.builtin.command: git -C {{ repo_dir }} rev-parse --short HEAD
+      register: commit_before
+      changed_when: false
+      failed_when: false
+      tags: [repo]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Pull
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Pull the latest code
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ repo_dir }}"
+        version: "{{ repo_branch }}"
+        accept_hostkey: true
+        # Discard local edits rather than failing. Recording Pis are consumers
+        # of the repo — a local change there is either accidental or a fix that
+        # belongs on the dev Pi. Without this, one stray edit blocks updates
+        # to that Pi indefinitely and silently.
+        force: true
+      register: git_result
+      tags: [repo]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Dependencies — only when the code actually changed
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Sync Python dependencies
+      ansible.builtin.pip:
+        requirements: "{{ repo_dir }}/recorder_app/requirements.txt"
+        extra_args: --break-system-packages
+      when: git_result.changed
+      tags: [python]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Report
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Get the commit after updating
+      ansible.builtin.command: git -C {{ repo_dir }} log -1 --oneline
+      register: commit_after
+      changed_when: false
+      tags: [report]
+
+    - name: Get the short hash after updating
+      ansible.builtin.command: git -C {{ repo_dir }} rev-parse --short HEAD
+      register: commit_after_short
+      changed_when: false
+      tags: [report]
+
+    # git_result.changed is true both when the commit moved and when only local
+    # edits were discarded, so the commits are compared to tell those apart.
+    - name: Summary
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          {%- set commit_moved = git_result.changed and commit_before.stdout | trim != commit_after_short.stdout | trim %}
+          {%- if commit_moved %}
+          updated to {{ commit_after.stdout }} (was {{ commit_before.stdout }})
+          {%- elif git_result.changed %}
+          already at {{ commit_after.stdout }} — local edits on the Pi were discarded
+          {%- else %}
+          already current at {{ commit_after.stdout }}
+          {%- endif %}
+          {{- ' — RESTART THE APP to pick up changes' if git_result.changed and app_running.stdout | length > 0 else '' }}
+      tags: [report]

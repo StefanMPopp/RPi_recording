@@ -1,0 +1,76 @@
+# =============================================================================
+# status.yml — health check across the whole fleet
+# =============================================================================
+#
+#     ansible-playbook -i inventory.ini status.yml
+#
+# Read-only: changes nothing. Run it before a session, or when a rig is
+# misbehaving, to see everything relevant in one place.
+#
+# Watch for:
+#   · Pis on a different commit    → they missed an update
+#   · Disk above 80% full          → SD cards slow down, frames start dropping
+#   · Temperature above 80 C       → the Pi throttles, frames start dropping
+#   · Camera not detected          → ribbon cable
+
+- name: Fleet status
+  hosts: pis
+  gather_facts: false
+
+  tasks:
+
+    - name: Deployed commit
+      ansible.builtin.command: git -C {{ repo_dir }} log -1 --format=%h\ %s
+      register: commit
+      changed_when: false
+      failed_when: false
+
+    - name: Disk usage
+      ansible.builtin.shell:
+        cmd: df -h / | awk 'NR==2 {print $4 " free (" $5 " used)"}'
+      register: disk
+      changed_when: false
+
+    - name: Temperature
+      ansible.builtin.command: vcgencmd measure_temp
+      register: temperature
+      changed_when: false
+      failed_when: false
+
+    - name: Throttling history
+      ansible.builtin.command: vcgencmd get_throttled
+      register: throttled
+      changed_when: false
+      failed_when: false
+
+    - name: Camera
+      ansible.builtin.command: libcamera-hello --list-cameras
+      register: camera
+      changed_when: false
+      failed_when: false
+
+    - name: Recordings on disk
+      ansible.builtin.shell:
+        cmd: find {{ projects_dir }} -type f \( -name '*.avi' -o -name '*.mp4' \) 2>/dev/null | wc -l
+      register: recording_count
+      changed_when: false
+
+    - name: Uptime
+      ansible.builtin.shell:
+        cmd: uptime -p
+      register: uptime
+      changed_when: false
+
+    # vcgencmd exists only on Raspberry Pi hardware, so rc is checked before
+    # interpreting its output — otherwise a missing command reads as a fault.
+    - name: Report
+      ansible.builtin.debug:
+        msg:
+          - "── {{ inventory_hostname }} ({{ unit_id | default('NO host_vars!') }}) ──"
+          - "commit:     {{ commit.stdout | default('UNKNOWN') | trim }}"
+          - "disk:       {{ disk.stdout | trim }}"
+          - "temp:       {{ temperature.stdout | replace('temp=', '') | trim if temperature.rc == 0 else 'n/a (not a Pi?)' }}"
+          - "throttled:  {{ ('never' if throttled.stdout | trim == 'throttled=0x0' else throttled.stdout | trim ~ '  <-- HAS THROTTLED') if throttled.rc == 0 else 'n/a' }}"
+          - "camera:     {{ 'ok' if camera.rc == 0 and 'imx477' in camera.stdout | lower else 'NOT DETECTED' }}"
+          - "videos:     {{ recording_count.stdout }} files in {{ projects_dir }}"
+          - "uptime:     {{ uptime.stdout | trim }}"

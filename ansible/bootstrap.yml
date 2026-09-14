@@ -1,0 +1,191 @@
+# =============================================================================
+# bootstrap.yml — set up a recording Pi from a fresh OS install
+# =============================================================================
+#
+# Run once when adding a Pi, and again any time a Pi needs rebuilding:
+#
+#     ansible-playbook -i inventory.ini bootstrap.yml --limit pi2
+#     ansible-playbook -i inventory.ini bootstrap.yml            # all Pis
+#
+# Safe to re-run. Every task is idempotent, so anything already correct is
+# skipped rather than redone. That makes this the repair tool for a Pi in an
+# unknown state, not just a first-time installer.
+#
+# Prerequisites (see wiki: Setup & maintenance → Add a new Pi):
+#   · OS flashed with SSH enabled
+#   · Static IP assigned and added to inventory.ini
+#   · SSH key copied with ssh-copy-id
+#   · host_vars/<pi_name>.yml created from the template
+
+- name: Bootstrap recording Pi
+  hosts: pis
+  gather_facts: true
+
+  tasks:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Preflight — fail early and clearly rather than midway through
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # Note: both messages are evaluated regardless of which branch is taken,
+    # so neither may reference unit_id — it is undefined in exactly the case
+    # this check exists to catch, and the Jinja error would mask the real one.
+    - name: Check that a host_vars file exists for this Pi
+      ansible.builtin.assert:
+        that:
+          - unit_id is defined
+          - unit_id != "piN"
+        fail_msg: >-
+          No host_vars file for {{ inventory_hostname }}, or it still contains
+          the template's placeholder unit_id. Create it on the dev Pi with:
+          cp host_vars/template.yml host_vars/{{ inventory_hostname }}.yml
+          then edit the values.
+        success_msg: "host_vars found for {{ inventory_hostname }}"
+      tags: [preflight]
+
+    - name: Check the camera is detected
+      ansible.builtin.command: libcamera-hello --list-cameras
+      register: camera_check
+      changed_when: false
+      failed_when: false
+      tags: [preflight]
+
+    - name: Warn if no camera was found
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: no camera detected on {{ inventory_hostname }}.
+          Check the ribbon cable at both ends. Bootstrap will continue —
+          the software installs fine without a camera attached.
+      when: camera_check.rc != 0 or 'imx477' not in camera_check.stdout | lower
+      tags: [preflight]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # System packages
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Update the apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600      # skip if refreshed within the last hour
+      become: true
+      tags: [packages]
+
+    - name: Install system packages
+      ansible.builtin.apt:
+        name: "{{ system_packages }}"
+        state: present
+      become: true
+      tags: [packages]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Repository
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Clone or update the repository
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ repo_dir }}"
+        version: "{{ repo_branch }}"
+        accept_hostkey: true
+        # Discard local edits. Recording Pis are consumers of the repo; any
+        # local change is either accidental or a fix that belongs on the dev Pi.
+        force: true
+      tags: [repo]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Python dependencies
+    # ─────────────────────────────────────────────────────────────────────────
+    #
+    # Installed system-wide rather than into a venv, because picamera2 is an
+    # apt package that a venv would not see without --system-site-packages.
+    # Keeping one environment avoids a class of confusing import errors.
+    #
+    # --break-system-packages is required on Raspberry Pi OS (PEP 668) and is
+    # safe here: requirements.txt holds only pure-Python packages, with the
+    # heavyweight ones (picamera2, PyQt6, opencv) installed via apt above.
+
+    - name: Install Python dependencies
+      ansible.builtin.pip:
+        requirements: "{{ repo_dir }}/recorder_app/requirements.txt"
+        extra_args: --break-system-packages
+      tags: [python]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Per-rig configuration
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Create the projects directory
+      ansible.builtin.file:
+        path: "{{ projects_dir }}"
+        state: directory
+        mode: "0755"
+      tags: [config]
+
+    - name: Write the unit config
+      ansible.builtin.copy:
+        dest: "{{ repo_dir }}/config_unit.yaml"
+        mode: "0644"
+        content: |
+          # Generated by Ansible — do not edit on the Pi.
+          # Change host_vars/{{ inventory_hostname }}.yml on the dev Pi and
+          # re-run bootstrap.yml instead; edits here are overwritten.
+          unit_id: {{ unit_id }}
+          arena_width_cm: {{ arena_width_cm }}
+          arena_height_cm: {{ arena_height_cm }}
+          notes: {{ notes | default('') | to_json }}
+          deployed_at: {{ ansible_facts['date_time']['iso8601'] }}
+      tags: [config]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Desktop launcher
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Ensure the desktop directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/Desktop"
+        state: directory
+        mode: "0755"
+      tags: [launcher]
+
+    - name: Create a desktop launcher for the recorder app
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user }}/Desktop/RPi Recorder.desktop"
+        mode: "0755"
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=RPi Recorder
+          Comment=Record insect behaviour video
+          Exec=python3 {{ repo_dir }}/recorder_app/main.py
+          Path={{ repo_dir }}
+          Icon=camera-video
+          Terminal=false
+          Categories=Science;
+      tags: [launcher]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Report
+    # ─────────────────────────────────────────────────────────────────────────
+
+    - name: Get the deployed commit
+      ansible.builtin.command: git -C {{ repo_dir }} log -1 --oneline
+      register: deployed_commit
+      changed_when: false
+      tags: [report]
+
+    - name: Get free disk space
+      ansible.builtin.command: df -h --output=avail /
+      register: disk_free
+      changed_when: false
+      tags: [report]
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "{{ inventory_hostname }} ({{ unit_id }}) bootstrapped"
+          - "commit:  {{ deployed_commit.stdout }}"
+          - "arena:   {{ arena_width_cm }} x {{ arena_height_cm }} cm"
+          - "free:    {{ disk_free.stdout_lines[1] | trim }}"
+          - "camera:  {{ 'detected' if camera_check.rc == 0 else 'NOT DETECTED — check ribbon cable' }}"
+          - "NEXT: on the rig, open the app and run Settings -> Recalibrate write speed"
+      tags: [report]

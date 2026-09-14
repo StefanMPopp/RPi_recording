@@ -1,35 +1,78 @@
 # Setup & maintenance overview
 
-This section covers everything managed through the **Manager app** — a tool that runs on the
-dev Pi and handles all software installation and updates across the fleet of recording Pis.
-
-Day-to-day users of the recording rigs do not need anything in this section.
+This section is for whoever maintains the rigs. Experimenters do not need it.
 
 ---
 
-## The three setup tasks
+## The model
 
-| Task | When | Tool |
+```
+        dev Pi                GitHub              recording Pis
+   ┌──────────────┐      ┌────────────┐      ┌────┬────┬────┐
+   │ edit + test  │─push─▶│ source of  │      │ pi1│ pi2│ …  │
+   │ run Ansible  │       │   truth    │      └────┴────┴────┘
+   └──────┬───────┘      └─────┬──────┘            ▲
+          │                    │                   │
+          └────── ansible tells each Pi to pull ───┘
+```
+
+Three rules keep eight rigs identical:
+
+1. **Code is only ever edited on the dev Pi**, then pushed to GitHub
+2. **Recording Pis only ever pull** — they are never edited directly
+3. **Updates go to all Pis at once** with one command
+
+Breaking rule 2 is the usual way fleets drift apart. A fix made directly on
+rig 3 exists only on rig 3, and will be silently overwritten at the next update.
+
+!!! warning "The dev Pi is the single point of failure"
+    It holds the SSH key and the `host_vars` files, and neither is in Git. With
+    a backup, replacing it takes half an hour; without one, it takes an
+    afternoon and every rig must be re-keyed by hand. See
+    [Replace the dev Pi](replace_dev_pi.md).
+
+---
+
+## Tasks
+
+| Task | How often | Page |
 |---|---|---|
-| [Set up the dev Pi](dev_pi.md) | Once, at the start of the project | Manual (follow instructions) |
-| [Add a new Pi](add_pi.md) | When adding a rig to the fleet | Manager app |
-| [Update Pis](update_pis.md) | When software changes are pushed | Manager app |
+| Set up the dev Pi | Once, ever | [Set up the dev Pi](dev_pi.md) |
+| Add a recording Pi | When adding a rig | [Add a new Pi](add_pi.md) |
+| Push a software update | Whenever code changes | [Update all Pis](update_pis.md) |
+| Replace or hand over the dev Pi | On upgrade, failure, or handover | [Replace the dev Pi](replace_dev_pi.md) |
+| Routine checks and fixes | Ongoing | [Day-to-day maintenance](maintenance.md) |
 
 ---
 
-## How the system works
+## What each machine needs
 
-All recording Pis run identical software, versioned and stored on GitHub. The Manager app
-uses **Ansible** — a tool that connects to each Pi over the network and enforces that every
-Pi is in the correct state — to install or update that software across all Pis simultaneously.
+| | Dev Pi | Recording Pi |
+|---|---|---|
+| Raspberry Pi OS | 64-bit with desktop | 64-bit with desktop |
+| Git | ✓ | ✓ |
+| Ansible | ✓ | — |
+| SSH key | ✓ (holds the key) | ✓ (accepts it) |
+| Static IP | recommended | **required** |
+| Repo clone | ✓ | ✓ |
+| Camera | optional | ✓ |
 
-The dev Pi is the only machine that runs the Manager app. The other Pis only need to be
-powered on and connected to the network when a setup or update task runs.
+Recording Pis need the desktop version because the recorder app is a graphical
+application shown on the rig's monitor.
 
-```
-Dev Pi  ──(Ansible via SSH)──►  Pi 1
-                              ►  Pi 2
-                              ►  Pi 3  …
-```
+---
 
-See the [Add a new Pi](add_pi.md) page for a full explanation of how this works.
+## Prerequisites for any maintenance task
+
+- All target Pis powered on and on the network
+- The dev Pi on the same network
+- No recording in progress on the target Pis
+
+Recording Pis need no interaction during an update — no login, no keyboard.
+Powered on and reachable is enough.
+
+!!! note "The Manager app"
+    A graphical Manager app to replace the Ansible commands below is planned but
+    **not yet built**. Until then, these pages give the commands directly. When
+    it exists, the commands will still work — the app is a front end for the
+    same playbooks.
