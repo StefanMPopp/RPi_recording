@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+        <meta name="description" content="Setup, recording, and maintenance guide for the animal video recording rigs">
       
       
       
@@ -903,6 +903,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="If something fails">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-copy-id-hangs-after-source-of-keys-to-be-installed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh-copy-id hangs after "Source of key(s) to be installed"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssh-copy-id-asks-for-a-password-and-rejects-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh-copy-id asks for a password and rejects it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1411,6 +1450,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="If something fails">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ssh-copy-id-hangs-after-source-of-keys-to-be-installed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh-copy-id hangs after "Source of key(s) to be installed"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssh-copy-id-asks-for-a-password-and-rejects-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh-copy-id asks for a password and rejects it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1502,10 +1580,10 @@ anything else.</p>
 </table>
 <h3 id="14-copy-the-ssh-key">1.4 Copy the SSH key<a class="headerlink" href="#14-copy-the-ssh-key" title="Permanent link">&para;</a></h3>
 <p>From the <strong>dev Pi</strong>, with the new rig's address:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/insect_tracker.pub<span class="w"> </span>USERNAME@192.168.1.102
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>acelab@192.168.1.102
 </code></pre></div>
 <p>You will be asked for the rig's password once. Verify:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/insect_tracker<span class="w"> </span>USERNAME@192.168.1.102
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>acelab@192.168.1.102
 </code></pre></div>
 <p>You should land in a terminal on the new Pi. Type <code>exit</code> to return.</p>
 <h3 id="15-add-it-to-the-inventory">1.5 Add it to the inventory<a class="headerlink" href="#15-add-it-to-the-inventory" title="Permanent link">&para;</a></h3>
@@ -1515,8 +1593,8 @@ anything else.</p>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="na">pi2 ansible_host</span><span class="o">=</span><span class="s">192.168.1.102</span><span class="w">    </span><span class="c1"># ← new line</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[pis:vars]</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="na">ansible_user</span><span class="o">=</span><span class="s">USERNAME</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="na">ansible_ssh_private_key_file</span><span class="o">=</span><span class="s">~/.ssh/insect_tracker</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="na">ansible_user</span><span class="o">=</span><span class="s">acelab</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="na">ansible_ssh_private_key_file</span><span class="o">=</span><span class="s">~/.ssh/rig_recording</span>
 </code></pre></div>
 <p>Then commit it — the inventory is part of the project record:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
@@ -1588,6 +1666,34 @@ and is stored in <code>config_app.yaml</code>, which is not shared between machi
 <p>Ansible works on all hosts in parallel, so ten Pis take about as long as one.</p>
 <hr />
 <h2 id="if-something-fails">If something fails<a class="headerlink" href="#if-something-fails" title="Permanent link">&para;</a></h2>
+<h3 id="ssh-copy-id-hangs-after-source-of-keys-to-be-installed">ssh-copy-id hangs after "Source of key(s) to be installed"<a class="headerlink" href="#ssh-copy-id-hangs-after-source-of-keys-to-be-installed" title="Permanent link">&para;</a></h3>
+<p>The key file was found; nothing at that address is answering. The command is
+waiting for a TCP connection that will eventually time out.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">192</span>.168.1.102
+</code></pre></div>
+<p>If the ping fails, work through these in order:</p>
+<p><strong>Is the address right?</strong> Confirm which subnet your network actually uses —
+<code>192.168.0.x</code> and <code>10.0.0.x</code> are as common as <code>192.168.1.x</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ip<span class="w"> </span>route<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>default
+</code></pre></div>
+<p><strong>Find the Pi.</strong> If it still has its default hostname:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">2</span><span class="w"> </span>raspberrypi.local
+</code></pre></div>
+<p>Otherwise scan the network. Raspberry Pis are identifiable by their MAC vendor:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>nmap
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>nmap<span class="w"> </span>-sn<span class="w"> </span><span class="m">192</span>.168.1.0/24
+</code></pre></div>
+<p><strong>Is it actually on the network?</strong> A Pi flashed without Wi-Fi credentials boots
+normally but never joins. Attach a monitor and check, or use ethernet.</p>
+<p><strong>Is SSH enabled?</strong> If "Enable SSH" was not ticked in Imager, the Pi is
+reachable by ping but refuses connections — that gives <code>Connection refused</code>
+rather than a hang.</p>
+<h3 id="ssh-copy-id-asks-for-a-password-and-rejects-it">ssh-copy-id asks for a password and rejects it<a class="headerlink" href="#ssh-copy-id-asks-for-a-password-and-rejects-it" title="Permanent link">&para;</a></h3>
+<p>The username is wrong. It is the one set in Imager when that Pi was flashed,
+not the one on the dev Pi — though keeping them the same across all machines
+avoids exactly this confusion. <code>ansible_user</code> in <code>inventory.ini</code> assumes they
+match.</p>
+<h3 id="playbook-failures">Playbook failures<a class="headerlink" href="#playbook-failures" title="Permanent link">&para;</a></h3>
 <p>Ansible names the failing task and host. Common causes:</p>
 <table>
 <thead>
@@ -1605,8 +1711,8 @@ and is stored in <code>config_app.yaml</code>, which is not shared between machi
 </tr>
 <tr>
 <td><code>Permission denied</code></td>
-<td>SSH key missing</td>
-<td>Repeat 1.4</td>
+<td>SSH key missing, or wrong <code>ansible_user</code></td>
+<td>Repeat 1.4; check the username</td>
 </tr>
 <tr>
 <td>apt task fails</td>

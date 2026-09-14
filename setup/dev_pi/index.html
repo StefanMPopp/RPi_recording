@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+        <meta name="description" content="Setup, recording, and maintenance guide for the animal video recording rigs">
       
       
       
@@ -1470,7 +1470,7 @@ on this machine and does not exist yet at this point.</p>
 <h2 id="3-generate-an-ssh-key">3. Generate an SSH key<a class="headerlink" href="#3-generate-an-ssh-key" title="Permanent link">&para;</a></h2>
 <p>An SSH key lets this Pi connect to GitHub and to the rigs without typing a
 password each time.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh-keygen<span class="w"> </span>-t<span class="w"> </span>ed25519<span class="w"> </span>-f<span class="w"> </span>~/.ssh/insect_tracker
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh-keygen<span class="w"> </span>-t<span class="w"> </span>ed25519<span class="w"> </span>-f<span class="w"> </span>~/.ssh/rig_recording
 </code></pre></div>
 <p>Press <span class="keys"><kbd class="key-enter">Enter</kbd></span> at both prompts for no passphrase. Two files appear:</p>
 <table>
@@ -1482,11 +1482,11 @@ password each time.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>~/.ssh/insect_tracker</code></td>
+<td><code>~/.ssh/rig_recording</code></td>
 <td><strong>Private key</strong> — never leaves this Pi</td>
 </tr>
 <tr>
-<td><code>~/.ssh/insect_tracker.pub</code></td>
+<td><code>~/.ssh/rig_recording.pub</code></td>
 <td><strong>Public key</strong> — safe to copy anywhere</td>
 </tr>
 </tbody>
@@ -1496,13 +1496,13 @@ password each time.</p>
 </code></pre></div>
 <p>Add:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Host github.com
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    IdentityFile ~/.ssh/insect_tracker
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    IdentityFile ~/.ssh/rig_recording
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    User git
 </code></pre></div>
 <p>Save with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-o">O</kbd></span>, <span class="keys"><kbd class="key-enter">Enter</kbd></span>, then <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-x">X</kbd></span>.</p>
 <hr />
 <h2 id="4-give-github-the-public-key">4. Give GitHub the public key<a class="headerlink" href="#4-give-github-the-public-key" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cat<span class="w"> </span>~/.ssh/insect_tracker.pub
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cat<span class="w"> </span>~/.ssh/rig_recording.pub
 </code></pre></div>
 <p>Copy the whole line, then on GitHub:</p>
 <p><strong>Repository → Settings → Deploy keys → Add deploy key</strong></p>

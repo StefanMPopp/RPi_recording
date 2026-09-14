@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+        <meta name="description" content="Setup, recording, and maintenance guide for the animal video recording rigs">
       
       
       
@@ -1669,7 +1669,7 @@ needs to move.</p>
 <td>Trivially</td>
 </tr>
 <tr>
-<td><code>~/.ssh/insect_tracker</code></td>
+<td><code>~/.ssh/rig_recording</code></td>
 <td><strong>Generated once</strong></td>
 <td>Only by re-keying every rig</td>
 </tr>
@@ -1703,8 +1703,8 @@ recorder app against a real camera much easier.</p>
 <p>The good case. Roughly 30 minutes, most of it installation.</p>
 <h3 id="1-back-up-from-the-old-dev-pi">1. Back up from the old dev Pi<a class="headerlink" href="#1-back-up-from-the-old-dev-pi" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/devpi_migration
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/insect_tracker<span class="w">      </span>~/devpi_migration/
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>~/.ssh/insect_tracker.pub<span class="w">  </span>~/devpi_migration/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording<span class="w">      </span>~/devpi_migration/
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w">  </span>~/devpi_migration/
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w"> </span>~/devpi_migration/
 </code></pre></div>
 <p>Copy <code>~/devpi_migration</code> to a USB stick — <strong>not</strong> into the repository, and not
@@ -1722,10 +1722,10 @@ install Git and Ansible, set the Git identity, install the app dependencies.</p>
 reusing the existing key rather than making a new one.</p>
 <h3 id="3-restore-the-key">3. Restore the key<a class="headerlink" href="#3-restore-the-key" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ssh
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/insect_tracker*<span class="w">  </span>~/.ssh/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/rig_recording*<span class="w">  </span>~/.ssh/
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>chmod<span class="w"> </span><span class="m">700</span><span class="w"> </span>~/.ssh
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>~/.ssh/insect_tracker
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>~/.ssh/insect_tracker.pub
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>~/.ssh/rig_recording
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>~/.ssh/rig_recording.pub
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">The permissions are not optional</p>
@@ -1737,7 +1737,7 @@ reusing the existing key rather than making a new one.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>nano<span class="w"> </span>~/.ssh/config
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Host github.com
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    IdentityFile ~/.ssh/insect_tracker
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    IdentityFile ~/.ssh/rig_recording
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    User git
 </code></pre></div>
 <p>Test:</p>
@@ -1761,7 +1761,7 @@ keeps things tidy.</p>
 <h3 id="7-retire-the-old-machine">7. Retire the old machine<a class="headerlink" href="#7-retire-the-old-machine" title="Permanent link">&para;</a></h3>
 <p>Once verified, <strong>wipe the old dev Pi rather than shelving it</strong>. It holds a
 private key granting access to every rig and write access to the repository.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>shred<span class="w"> </span>-u<span class="w"> </span>~/.ssh/insect_tracker
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>shred<span class="w"> </span>-u<span class="w"> </span>~/.ssh/rig_recording
 </code></pre></div>
 <p>Then reflash the card if it is being reused.</p>
 <hr />
@@ -1779,7 +1779,7 @@ that no longer exists.</p>
 <ol>
 <li><strong>GitHub → repository → Settings → Deploy keys</strong></li>
 <li>Delete the old key</li>
-<li>Add the new <code>~/.ssh/insect_tracker.pub</code>, <strong>with write access ticked</strong></li>
+<li>Add the new <code>~/.ssh/rig_recording.pub</code>, <strong>with write access ticked</strong></li>
 </ol>
 <h3 id="3-clone-the-repository">3. Clone the repository<a class="headerlink" href="#3-clone-the-repository" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
@@ -1790,7 +1790,7 @@ address.</p>
 <p>This is the slow part. Each rig must be told about the new key, using its
 password:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>ip<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">101</span><span class="w"> </span><span class="m">102</span><span class="w"> </span><span class="m">103</span><span class="w"> </span><span class="m">104</span><span class="w"> </span><span class="m">105</span><span class="w"> </span><span class="m">106</span><span class="w"> </span><span class="m">107</span><span class="w"> </span><span class="m">108</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/insect_tracker.pub<span class="w"> </span>acelab@192.168.1.<span class="nv">$ip</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>acelab@192.168.1.<span class="nv">$ip</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">done</span>
 </code></pre></div>
 <p>You will be prompted for the password once per rig. Adjust the numbers to match
@@ -1882,7 +1882,7 @@ anyway, poor for a temporary or partial one.</p>
 <h2 id="preventing-all-of-this">Preventing all of this<a class="headerlink" href="#preventing-all-of-this" title="Permanent link">&para;</a></h2>
 <p>Two commands, occasionally:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/devpi_backup
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>cp<span class="w"> </span>~/.ssh/insect_tracker*<span class="w"> </span>~/RPi_recording/ansible/host_vars/*.yml<span class="w"> </span>~/devpi_backup/
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w"> </span>~/RPi_recording/ansible/host_vars/*.yml<span class="w"> </span>~/devpi_backup/
 </code></pre></div>
 <p>Copy that folder somewhere off the Pi — institutional storage, an encrypted USB
 stick, anywhere that is not the machine it protects against losing.</p>
@@ -1891,7 +1891,7 @@ stick, anywhere that is not the machine it protects against losing.</p>
 <a href="#recovery-old-machine-is-gone">recovery</a>.</p>
 <div class="admonition danger">
 <p class="admonition-title">Do not commit the private key</p>
-<p><code>~/.ssh/insect_tracker</code> grants access to every rig and write access to the
+<p><code>~/.ssh/rig_recording</code> grants access to every rig and write access to the
 repository. It must never go into Git, not even a private repository —
 Git history is very hard to purge, and a repository's audience tends to
 grow over time.</p>

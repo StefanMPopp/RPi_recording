@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+        <meta name="description" content="Setup, recording, and maintenance guide for the animal video recording rigs">
       
       
       
@@ -1461,7 +1461,7 @@ bytes, not the whole repository.</p>
 underneath a running app.</p>
 <hr />
 <h2 id="checking-it-worked">Checking it worked<a class="headerlink" href="#checking-it-worked" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;git -C /home/USERNAME/RPi_recording log -1 --oneline&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;git -C /home/acelab/RPi_recording log -1 --oneline&quot;</span>
 </code></pre></div>
 <p>Every Pi should report the same commit as the dev Pi:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>-C<span class="w"> </span>~/RPi_recording<span class="w"> </span>log<span class="w"> </span>-1<span class="w"> </span>--oneline
@@ -1503,7 +1503,7 @@ underneath a running app.</p>
 <h3 id="local-changes-would-be-overwritten">"Local changes would be overwritten"<a class="headerlink" href="#local-changes-would-be-overwritten" title="Permanent link">&para;</a></h3>
 <p>Someone edited code directly on a recording Pi. Discard the local edits — the
 repository is the source of truth:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/insect_tracker<span class="w"> </span>USERNAME@192.168.1.10X
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>acelab@192.168.1.10X
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>--<span class="w"> </span>.
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nb">exit</span>

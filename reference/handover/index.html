@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Setup, recording, and maintenance guide for the insect video recording rigs">
+        <meta name="description" content="Setup, recording, and maintenance guide for the animal video recording rigs">
       
       
       
@@ -1342,11 +1342,11 @@ mechanics of moving to a new machine or issuing a second key, see
 <li>[ ] <strong>Dev Pi</strong> — username and password</li>
 <li>[ ] <strong>Recording Pis</strong> — username and password (same across rigs)</li>
 <li>[ ] <strong>Router</strong> — admin login, for the static IP reservations</li>
-<li>[ ] <strong>SSH key</strong> — <code>~/.ssh/insect_tracker</code> and <code>.pub</code> on the dev Pi</li>
+<li>[ ] <strong>SSH key</strong> — <code>~/.ssh/rig_recording</code> and <code>.pub</code> on the dev Pi</li>
 </ul>
 <div class="admonition danger">
 <p class="admonition-title">The SSH key is the critical item</p>
-<p><code>~/.ssh/insect_tracker</code> grants access to every rig and write access to the
+<p><code>~/.ssh/rig_recording</code> grants access to every rig and write access to the
 repository. It exists <strong>only on the dev Pi</strong> unless someone backed it up.</p>
 <p>If it is lost: generate a new one, add it to GitHub as a deploy key, and
 <code>ssh-copy-id</code> it to all eight rigs using their passwords. Recoverable, but
@@ -1357,7 +1357,7 @@ an afternoon's work — see
 <h2 id="files-that-exist-nowhere-else">Files that exist nowhere else<a class="headerlink" href="#files-that-exist-nowhere-else" title="Permanent link">&para;</a></h2>
 <p>Not in Git, by design. Copy them before the dev Pi is wiped:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/rig_backup
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/insect_tracker*<span class="w">                    </span>~/rig_backup/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w">                    </span>~/rig_backup/
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w">      </span>~/rig_backup/
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>~/RPi_recording/ansible/inventory.ini<span class="w">     </span>~/rig_backup/
 </code></pre></div>
@@ -1370,7 +1370,7 @@ an afternoon's work — see
 </thead>
 <tbody>
 <tr>
-<td><code>~/.ssh/insect_tracker</code></td>
+<td><code>~/.ssh/rig_recording</code></td>
 <td>Access to everything</td>
 </tr>
 <tr>
