@@ -245,6 +245,25 @@ not the one on the dev Pi — though keeping them the same across all machines
 avoids exactly this confusion. `ansible_user` in `inventory.ini` assumes they
 match.
 
+### Missing sudo password
+
+`bootstrap.yml` needs `sudo` on the rig for installing packages, and Ansible
+doesn't have a password for it. Set up passwordless sudo once per rig — this
+matches how Raspberry Pi OS's default user is normally configured, so it's
+likely something changed rather than a step that was always needed:
+
+```bash
+ssh pi@pi1.local
+echo "pi ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/010_pi-nopasswd
+exit
+```
+
+Or, without changing anything on the rig, supply the password each run:
+
+```bash
+ansible-playbook -i inventory.ini bootstrap.yml --limit pi1 --ask-become-pass
+```
+
 ### Playbook failures
 
 Ansible names the failing task and host. Common causes:
@@ -253,7 +272,14 @@ Ansible names the failing task and host. Common causes:
 |---|---|---|
 | `UNREACHABLE` | Pi off, wrong IP, or key not copied | Repeat 1.3 and 1.4 |
 | `Permission denied` | SSH key missing, or wrong `ansible_user` | Repeat 1.4; check the username |
-| apt task fails | No internet on the Pi | Check its network |
-| Repo clone fails | Deploy key missing | See [dev Pi setup](dev_pi.md#4-give-github-the-public-key) |
+| `Missing sudo password` | The rig's user needs a password for `sudo` | Set up passwordless sudo for that user, or re-run with `--ask-become-pass` |
+| `Failed to update apt cache` | Usually a network problem, sometimes a captive portal | SSH in and run `sudo apt update` directly to see the real error |
+| Git clone `Permission denied (publickey)` on the **rig** | The read-only deploy key hasn't been generated or added to GitHub yet | See [dev Pi setup, step 5](dev_pi.md#5-generate-a-read-only-key-for-the-recording-rigs) — one-time, then automatic for every rig |
+| Repo clone fails on the **dev Pi** | Dev Pi's own write-access deploy key missing | See [dev Pi setup, step 4](dev_pi.md#4-give-github-the-public-key) |
 
-Fix and re-run — completed steps are skipped.
+Fix and re-run — completed steps are skipped. To retry just the GitHub key
+step without repeating everything else:
+
+```bash
+ansible-playbook -i inventory.ini bootstrap.yml --limit pi1 --tags github
+```

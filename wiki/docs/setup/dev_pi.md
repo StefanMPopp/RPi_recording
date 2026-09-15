@@ -111,7 +111,44 @@ deploy key was saved.
 
 ---
 
-## 5. Set your Git identity
+## 5. Generate a read-only key for the recording rigs
+
+!!! info "Different from the key above"
+    The key in steps 3–4 belongs to the dev Pi alone and has **write access** —
+    it must never be copied anywhere else. Every recording rig also needs to
+    reach GitHub, since bootstrapping clones the repo **on the rig itself**,
+    not on the dev Pi. A second, **read-only** key is generated once here and
+    distributed to every rig automatically by `bootstrap.yml`.
+
+```bash
+cd ~/RPi_recording/ansible
+mkdir -p files
+ssh-keygen -t ed25519 -f files/github_deploy_ro -C "rig read-only" -N ""
+cat files/github_deploy_ro.pub
+```
+
+Add it on GitHub the same way as before, but **leave "Allow write access"
+unticked**:
+
+**Repository → Settings → Deploy keys → Add deploy key**
+
+- Title: `rig-readonly`
+- Key: paste it
+- Leave write access **off**
+
+This key lives at `ansible/files/github_deploy_ro` and is never committed —
+`bootstrap.yml` copies it onto each rig over the SSH connection Ansible
+already has, the same way it copies the unit config. You only do this once;
+every current and future rig picks it up automatically the next time it's
+bootstrapped.
+
+!!! warning "Back this up like the SSH key and host_vars"
+    It exists only in `ansible/files/` on the dev Pi. See the
+    [handover checklist](../reference/handover.md).
+
+---
+
+## 6. Set your Git identity
 
 ```bash
 git config --global user.name  "Your Name"
@@ -124,7 +161,7 @@ strategy so `git pull` does not stop to ask.
 
 ---
 
-## 6. Clone the repository
+## 7. Clone the repository
 
 ```bash
 git clone git@github.com:StefanMPopp/RPi_recording.git ~/RPi_recording
@@ -132,7 +169,7 @@ git clone git@github.com:StefanMPopp/RPi_recording.git ~/RPi_recording
 
 ---
 
-## 7. Install the recorder app's dependencies
+## 8. Install the recorder app's dependencies
 
 Even on the dev Pi, so it can be tested locally:
 
@@ -158,7 +195,7 @@ python3 recorder_app/main.py
 
 ---
 
-## 8. Install the wiki tooling (optional)
+## 9. Install the wiki tooling (optional)
 
 To edit and publish these pages:
 
@@ -191,7 +228,7 @@ mkdocs gh-deploy
 
 ---
 
-## 9. Set a static IP
+## 10. Set a static IP
 
 Reserve an address for the dev Pi in your router's admin panel, the same way as
 for the rigs. Suggested: `192.168.50.100`.

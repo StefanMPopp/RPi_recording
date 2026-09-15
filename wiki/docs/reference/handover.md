@@ -13,6 +13,8 @@ mechanics of moving to a new machine or issuing a second key, see
 - [ ] **Recording Pis** — username and password (same across rigs)
 - [ ] **Router** — admin login, for the static IP reservations
 - [ ] **SSH key** — `~/.ssh/rig_recording` and `.pub` on the dev Pi
+- [ ] **Read-only deploy key** — `ansible/files/github_deploy_ro` and `.pub`
+      on the dev Pi
 
 !!! danger "The SSH key is the critical item"
     `~/.ssh/rig_recording` grants access to every rig and write access to the
@@ -33,12 +35,14 @@ Not in Git, by design. Copy them before the dev Pi is wiped:
 mkdir -p ~/rig_backup
 cp ~/.ssh/rig_recording*                    ~/rig_backup/
 cp -r ~/RPi_recording/ansible/host_vars      ~/rig_backup/
+cp ~/RPi_recording/ansible/files/github_deploy_ro*  ~/rig_backup/
 cp ~/RPi_recording/ansible/inventory.ini     ~/rig_backup/
 ```
 
 | File | Why it matters |
 |---|---|
-| `~/.ssh/rig_recording` | Access to everything |
+| `~/.ssh/rig_recording` | Access to everything, with write |
+| `ansible/files/github_deploy_ro*` | What every rig uses to clone the repo — without it, bootstrapping a rig fails with a GitHub permission error |
 | `ansible/host_vars/*.yml` | Each rig's arena dimensions and identity |
 | `ansible/inventory.ini` | Which Pis exist and at which addresses (this one *is* in Git, but keep a copy) |
 
@@ -66,22 +70,31 @@ Things that are easy to get wrong and expensive to rediscover:
 1. **The C–CS ring.** If a rig will not focus, check for it before anything
    else. See [camera notes](camera_notes.md).
 
-2. **Never edit code on a recording Pi.** Changes exist on one rig, are
+2. **Each rig needs its own way to reach GitHub.** `bootstrap.yml` clones the
+   repo by running `git` *on the rig itself*, not on the dev Pi — so the dev
+   Pi's own SSH key being set up correctly says nothing about whether a rig
+   can clone. This is handled automatically by the read-only deploy key
+   above, but if `ansible/files/github_deploy_ro` ever goes missing, every
+   new rig fails bootstrap with `Permission denied (publickey)` on the git
+   clone step, and the fix is regenerating that key — see
+   [Set up the dev Pi, step 5](../setup/dev_pi.md).
+
+3. **Never edit code on a recording Pi.** Changes exist on one rig, are
    invisible, and are destroyed at the next update. Dev Pi → GitHub → rigs.
 
-3. **`1332 × 990` sees only ~66% of the scene.** It will crop a full-arena
+4. **`1332 × 990` sees only ~66% of the scene.** It will crop a full-arena
    view. Use `2028 × 1520` for high framerates with the whole arena.
 
-4. **Greyscale unless colour is genuinely needed.** Three times smaller, no loss
+5. **Greyscale unless colour is genuinely needed.** Three times smaller, no loss
    for tracking.
 
-5. **H.264 is risky for tracking.** Inter-frame compression puts artefacts
+6. **H.264 is risky for tracking.** Inter-frame compression puts artefacts
    exactly on moving subjects. Validate before committing an experiment to it.
 
-6. **Recalibrate write speed after any SD card swap.** Otherwise the headroom
+7. **Recalibrate write speed after any SD card swap.** Otherwise the headroom
    estimates describe a card that is no longer present.
 
-7. **Watch queue depth, not just dropped frames.** It rises before frames are
+8. **Watch queue depth, not just dropped frames.** It rises before frames are
    lost, so it is the warning rather than the symptom.
 
 ---

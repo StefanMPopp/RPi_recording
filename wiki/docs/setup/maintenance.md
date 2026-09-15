@@ -112,17 +112,20 @@ SD cards are the least reliable part of the system.
 | Wiki source | GitHub, `main` branch | Inherently |
 | `ansible/host_vars/*.yml` | Dev Pi only | **Manual — do this** |
 | `~/.ssh/rig_recording` | Dev Pi only | **Manual — do this** |
+| `ansible/files/github_deploy_ro*` | Dev Pi only | **Manual — do this** |
 | `config_app.yaml` per rig | Each rig | Not needed; regenerate by recalibrating |
 | Recordings | Rig SD cards → analysis machine | Manual `rsync` |
 
-The two manual items are the ones that hurt. Without the SSH key you lose access
-to every rig and to GitHub; without `host_vars` you lose each rig's
-configuration. Copy both somewhere safe:
+The three manual items are the ones that hurt. Without the SSH key you lose
+access to every rig and to GitHub; without the read-only key every rig fails
+to bootstrap the same way pi1 did the first time; without `host_vars` you lose
+each rig's configuration. Copy all three somewhere safe:
 
 ```bash
 mkdir -p ~/rig_backup
 cp ~/.ssh/rig_recording* ~/rig_backup/
 cp -r ~/RPi_recording/ansible/host_vars ~/rig_backup/
+cp ~/RPi_recording/ansible/files/github_deploy_ro* ~/rig_backup/
 # then copy ~/rig_backup to a USB stick or institutional storage
 ```
 

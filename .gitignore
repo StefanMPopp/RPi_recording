@@ -27,3 +27,17 @@ ansible/host_vars/*.yml
 
 # Ansible runtime files
 ansible/*.retry
+# ── Add these lines to .gitignore in the repo root ────────────────────────────
+
+# Per-rig Ansible config — hardware-specific, exists only on the dev Pi.
+# Back these up separately; they are not recoverable from GitHub.
+ansible/host_vars/*.yml
+!ansible/host_vars/template.yml
+
+# Ansible runtime files
+ansible/*.retry
+
+# Read-only GitHub deploy key distributed to recording Pis — a credential,
+# exists only on the dev Pi, never committed. See wiki → Set up the dev Pi.
+ansible/files/github_deploy_ro
+ansible/files/github_deploy_ro.pub

@@ -78,6 +78,75 @@
       tags: [packages]
 
     # ─────────────────────────────────────────────────────────────────────────
+    # GitHub access
+    # ─────────────────────────────────────────────────────────────────────────
+    #
+    # The clone task below runs ON THIS PI, not on the dev Pi — Ansible modules
+    # execute on the managed host. So the Pi needs its own way to authenticate
+    # to GitHub; the dev Pi's key is not automatically available here.
+    #
+    # A dedicated READ-ONLY deploy key is distributed to every rig, kept
+    # separate from the dev Pi's own key (which has write access and must
+    # never leave the dev Pi). One-time setup on the dev Pi, see:
+    # wiki → Setup & maintenance → Set up the dev Pi.
+
+    - name: Check the read-only GitHub key exists on the dev Pi
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/files/github_deploy_ro"
+      register: readonly_key_file
+      delegate_to: localhost
+      become: false
+      run_once: true
+      tags: [github]
+
+    - name: Fail with instructions if the read-only key is missing
+      ansible.builtin.fail:
+        msg: >-
+          No read-only GitHub deploy key found at
+          ansible/files/github_deploy_ro on the dev Pi. Generate one with:
+          ssh-keygen -t ed25519 -f ansible/files/github_deploy_ro -C "rig read-only" -N ""
+          then add the .pub as a deploy key on GitHub WITHOUT write access.
+          See wiki → Setup & maintenance → Set up the dev Pi.
+      when: not readonly_key_file.stat.exists
+      delegate_to: localhost
+      become: false
+      run_once: true
+      tags: [github]
+
+    - name: Ensure ~/.ssh exists on this Pi
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/.ssh"
+        state: directory
+        mode: "0700"
+      tags: [github]
+
+    - name: Copy the read-only key to this Pi
+      ansible.builtin.copy:
+        src: "files/github_deploy_ro"
+        dest: "/home/{{ ansible_user }}/.ssh/github_deploy_ro"
+        mode: "0600"
+      tags: [github]
+
+    - name: Copy the read-only key's public half to this Pi
+      ansible.builtin.copy:
+        src: "files/github_deploy_ro.pub"
+        dest: "/home/{{ ansible_user }}/.ssh/github_deploy_ro.pub"
+        mode: "0644"
+      tags: [github]
+
+    - name: Point SSH at the read-only key for GitHub
+      ansible.builtin.blockinfile:
+        path: "/home/{{ ansible_user }}/.ssh/config"
+        create: true
+        mode: "0600"
+        marker: "# {mark} rig_recording github deploy key — managed by bootstrap.yml"
+        block: |
+          Host github.com
+              IdentityFile ~/.ssh/github_deploy_ro
+              User git
+      tags: [github]
+
+    # ─────────────────────────────────────────────────────────────────────────
     # Repository
     # ─────────────────────────────────────────────────────────────────────────
 

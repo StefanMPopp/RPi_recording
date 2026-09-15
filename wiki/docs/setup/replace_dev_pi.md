@@ -1,7 +1,8 @@
 # Replace or migrate the dev Pi
 
-The dev Pi holds two things that exist nowhere else: the **SSH private key**
-and the **`host_vars` files**. Everything else is in Git.
+The dev Pi holds three things that exist nowhere else: the **SSH private
+key**, the **read-only deploy key**, and the **`host_vars` files**. Everything
+else is in Git.
 
 Whether this is a ten-minute job or an afternoon depends entirely on one
 question:
@@ -24,12 +25,14 @@ needs to move.
 |---|---|---|
 | Raspberry Pi OS, Git, Ansible | Reinstall | Trivially |
 | Repository clone | `git clone` | Trivially |
-| `~/.ssh/rig_recording` | **Generated once** | Only by re-keying every rig |
+| `~/.ssh/rig_recording` | **Generated once** | Only by re-keying the dev Pi's GitHub access |
+| `ansible/files/github_deploy_ro` | **Generated once** | Only by re-keying every rig's GitHub access |
 | `ansible/host_vars/*.yml` | **Written by hand** | Only by re-measuring every rig |
 | `git config` identity | Two commands | Trivially |
 | Recorder app dependencies | apt + pip | Trivially |
 
-Only rows three and four matter. They are the entire reason this page exists.
+Only rows three, four and five matter. They are the entire reason this page
+exists.
 
 !!! note "There is nothing special about the machine"
     "Dev Pi" is a role, not a configuration. Any machine with the key, the
@@ -50,6 +53,7 @@ mkdir -p ~/devpi_migration
 cp ~/.ssh/rig_recording      ~/devpi_migration/
 cp ~/.ssh/rig_recording.pub  ~/devpi_migration/
 cp -r ~/RPi_recording/ansible/host_vars ~/devpi_migration/
+cp -r ~/RPi_recording/ansible/files ~/devpi_migration/
 ```
 
 Copy `~/devpi_migration` to a USB stick — **not** into the repository, and not
@@ -63,11 +67,11 @@ Also note down, since they are not in any file:
 
 ### 2. Set up the new machine
 
-Follow [Set up the dev Pi](dev_pi.md) steps 1, 2, 5 and 7 — flash the OS,
+Follow [Set up the dev Pi](dev_pi.md) steps 1, 2, 6 and 8 — flash the OS,
 install Git and Ansible, set the Git identity, install the app dependencies.
 
-**Skip steps 3 and 4** (generating a key, adding it to GitHub). You are
-reusing the existing key rather than making a new one.
+**Skip steps 3, 4 and 5** (generating both keys, adding them to GitHub). You
+are reusing the existing keys rather than making new ones.
 
 ### 3. Restore the key
 
@@ -104,12 +108,18 @@ ssh -T git@github.com
 
 A greeting with your username means the key works and GitHub still accepts it.
 
-### 4. Clone and restore host_vars
+### 4. Clone and restore host_vars and the read-only key
 
 ```bash
 git clone git@github.com:StefanMPopp/RPi_recording.git ~/RPi_recording
 cp /media/usb/devpi_migration/host_vars/*.yml ~/RPi_recording/ansible/host_vars/
+mkdir -p ~/RPi_recording/ansible/files
+cp /media/usb/devpi_migration/files/github_deploy_ro* ~/RPi_recording/ansible/files/
 ```
+
+!!! note "Must come after the clone"
+    `ansible/files/` lives inside the repo, and `git clone` refuses to clone
+    into a non-empty directory — this has to happen after, not before.
 
 ### 5. Verify
 
@@ -153,14 +163,21 @@ Budget an afternoon, mostly for step 4.
 Follow [Set up the dev Pi](dev_pi.md) in full, **including** generating a new
 key. You now have a working machine with a key no rig recognises.
 
-### 2. Authorise the new key on GitHub
+### 2. Authorise the new keys on GitHub
 
-The old deploy key still sits in the repository settings, pointing at a machine
-that no longer exists.
+Following [Set up the dev Pi](dev_pi.md) "in full" generated BOTH keys fresh —
+the dev Pi's write key and the rigs' read-only key. Both old deploy key
+entries still sit in the repository settings, pointing at a machine that no
+longer exists.
 
 1. **GitHub → repository → Settings → Deploy keys**
-2. Delete the old key
+2. Delete both old keys (`devpi` and `rig-readonly`)
 3. Add the new `~/.ssh/rig_recording.pub`, **with write access ticked**
+4. Add the new `ansible/files/github_deploy_ro.pub`, **write access left off**
+
+The rigs don't need touching for the read-only key specifically — the next
+time each one is bootstrapped (step 4 below covers getting SSH access back),
+`bootstrap.yml` copies the new key onto it automatically.
 
 ### 3. Clone the repository
 
@@ -300,7 +317,9 @@ Two commands, occasionally:
 
 ```bash
 mkdir -p ~/devpi_backup
-cp ~/.ssh/rig_recording* ~/RPi_recording/ansible/host_vars/*.yml ~/devpi_backup/
+cp ~/.ssh/rig_recording* ~/devpi_backup/
+cp ~/RPi_recording/ansible/host_vars/*.yml ~/devpi_backup/
+cp ~/RPi_recording/ansible/files/github_deploy_ro* ~/devpi_backup/
 ```
 
 Copy that folder somewhere off the Pi — institutional storage, an encrypted USB
