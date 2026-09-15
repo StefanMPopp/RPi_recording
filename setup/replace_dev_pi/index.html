@@ -1789,12 +1789,13 @@ address.</p>
 <h3 id="4-re-authorise-every-rig">4. Re-authorise every rig<a class="headerlink" href="#4-re-authorise-every-rig" title="Permanent link">&para;</a></h3>
 <p>This is the slow part. Each rig must be told about the new key, using its
 password:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>ip<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">101</span><span class="w"> </span><span class="m">102</span><span class="w"> </span><span class="m">103</span><span class="w"> </span><span class="m">104</span><span class="w"> </span><span class="m">105</span><span class="w"> </span><span class="m">106</span><span class="w"> </span><span class="m">107</span><span class="w"> </span><span class="m">108</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>acelab@192.168.1.<span class="nv">$ip</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>n<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="m">8</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>pi@pi<span class="si">${</span><span class="nv">n</span><span class="si">}</span>.local
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">done</span>
 </code></pre></div>
-<p>You will be prompted for the password once per rig. Adjust the numbers to match
-your <code>inventory.ini</code>.</p>
+<p>You will be prompted for the password once per rig. Adjust the range to match
+your <code>inventory.ini</code>. If your rigs use static IPs instead of hostnames,
+substitute those.</p>
 <p>Then verify:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ping
@@ -1816,7 +1817,7 @@ not a data problem.</p>
 <p>Two shortcuts before measuring anything by hand:</p>
 <p><strong>The rigs still have their deployed copy.</strong> <code>bootstrap.yml</code> wrote
 <code>config_unit.yaml</code> onto each Pi, and it survives:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;cat /home/acelab/RPi_recording/config_unit.yaml&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;cat /home/pi/RPi_recording/config_unit.yaml&quot;</span>
 </code></pre></div>
 <p>That gives you <code>unit_id</code>, arena dimensions and notes for every rig at once —
 usually everything you need.</p>
@@ -1834,7 +1835,7 @@ rigs still trust it.</p>
 <p>To fully revoke it, on each rig remove the old key's line from
 <code>~/.ssh/authorized_keys</code>. With the new key working, Ansible can do this:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ansible.posix.authorized_key<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-a<span class="w"> </span><span class="s2">&quot;user=acelab state=absent key=&#39;</span><span class="k">$(</span>cat<span class="w"> </span>/path/to/old_key.pub<span class="k">)</span><span class="s2">&#39;&quot;</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-a<span class="w"> </span><span class="s2">&quot;user=pi state=absent key=&#39;</span><span class="k">$(</span>cat<span class="w"> </span>/path/to/old_key.pub<span class="k">)</span><span class="s2">&#39;&quot;</span>
 </code></pre></div>
 <p>If the old public key is also lost, edit <code>~/.ssh/authorized_keys</code> on each rig
 by hand and delete the unrecognised entry.</p>

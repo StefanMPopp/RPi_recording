@@ -813,10 +813,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#13-assign-a-static-ip" class="md-nav__link">
+  <a href="#13-find-the-pi-on-the-network" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1.3 Assign a static IP
+        1.3 Find the Pi on the network
       
     </span>
   </a>
@@ -1360,10 +1360,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#13-assign-a-static-ip" class="md-nav__link">
+  <a href="#13-find-the-pi-on-the-network" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1.3 Assign a static IP
+        1.3 Find the Pi on the network
       
     </span>
   </a>
@@ -1538,11 +1538,27 @@ waiting for downloads.</p>
 </code></pre></div>
 <p>If the IMX477 is not listed, check the ribbon cable at both ends before
 anything else.</p>
-<h3 id="13-assign-a-static-ip">1.3 Assign a static IP<a class="headerlink" href="#13-assign-a-static-ip" title="Permanent link">&para;</a></h3>
-<p>Ansible finds each Pi by address, so it must not change.</p>
+<h3 id="13-find-the-pi-on-the-network">1.3 Find the Pi on the network<a class="headerlink" href="#13-find-the-pi-on-the-network" title="Permanent link">&para;</a></h3>
+<p>Ansible needs a stable address for each Pi. There are two ways to get one —
+use whichever works on your network.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Hostname (recommended)</label><label for="__tabbed_1_2">Static IP</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Raspberry Pi OS runs mDNS by default, so a Pi is reachable at
+<code>&lt;hostname&gt;.local</code> regardless of what address DHCP hands it — no router
+access needed, and it keeps working even if the address changes after a
+reboot. This is the more reliable option on institutional networks, which
+often don't allow reserving addresses, and on a direct switch connection
+with no router at all.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">2</span><span class="w"> </span>pi1.local
+</code></pre></div>
+<p>If that answers, use <code>pi1.local</code> as the address everywhere below.</p>
+</div>
+<div class="tabbed-block">
+<p>If you have router access and prefer a fixed address:</p>
 <ol>
 <li>Let the Pi connect and wait a minute</li>
-<li>Open your router's admin panel (usually <code>192.168.1.1</code>)</li>
+<li>Open your router's admin panel</li>
 <li>Find the Pi by its hostname</li>
 <li>Reserve an address for it</li>
 </ol>
@@ -1559,17 +1575,17 @@ anything else.</p>
 <tr>
 <td>Dev Pi</td>
 <td><code>devpi</code></td>
-<td><code>192.168.1.100</code></td>
+<td><code>192.168.50.100</code></td>
 </tr>
 <tr>
 <td>Rig 1</td>
 <td><code>pi1</code></td>
-<td><code>192.168.1.101</code></td>
+<td><code>192.168.50.101</code></td>
 </tr>
 <tr>
 <td>Rig 2</td>
 <td><code>pi2</code></td>
-<td><code>192.168.1.102</code></td>
+<td><code>192.168.50.102</code></td>
 </tr>
 <tr>
 <td>…</td>
@@ -1578,39 +1594,44 @@ anything else.</p>
 </tr>
 </tbody>
 </table>
+</div>
+</div>
+</div>
+<p>The rest of this page uses <code>pi1.local</code> — substitute a static IP if that's
+what you're using instead.</p>
 <h3 id="14-copy-the-ssh-key">1.4 Copy the SSH key<a class="headerlink" href="#14-copy-the-ssh-key" title="Permanent link">&para;</a></h3>
 <p>From the <strong>dev Pi</strong>, with the new rig's address:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>acelab@192.168.1.102
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w"> </span>pi@pi1.local
 </code></pre></div>
 <p>You will be asked for the rig's password once. Verify:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>acelab@192.168.1.102
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>pi@pi1.local
 </code></pre></div>
 <p>You should land in a terminal on the new Pi. Type <code>exit</code> to return.</p>
 <h3 id="15-add-it-to-the-inventory">1.5 Add it to the inventory<a class="headerlink" href="#15-add-it-to-the-inventory" title="Permanent link">&para;</a></h3>
 <p>On the dev Pi, edit <code>~/RPi_recording/ansible/inventory.ini</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[pis]</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="na">pi1 ansible_host</span><span class="o">=</span><span class="s">192.168.1.101</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="na">pi2 ansible_host</span><span class="o">=</span><span class="s">192.168.1.102</span><span class="w">    </span><span class="c1"># ← new line</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[pis:vars]</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="na">ansible_user</span><span class="o">=</span><span class="s">acelab</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="na">ansible_ssh_private_key_file</span><span class="o">=</span><span class="s">~/.ssh/rig_recording</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[pis]</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="na">pi1 ansible_host</span><span class="o">=</span><span class="s">pi1.local</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="na">pi2 ansible_host</span><span class="o">=</span><span class="s">pi2.local</span><span class="w">    </span><span class="c1"># ← new line</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">[pis:vars]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="na">ansible_user</span><span class="o">=</span><span class="s">pi</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="na">ansible_ssh_private_key_file</span><span class="o">=</span><span class="s">~/.ssh/rig_recording</span>
 </code></pre></div>
 <p>Then commit it — the inventory is part of the project record:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>git<span class="w"> </span>add<span class="w"> </span>ansible/inventory.ini
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;add pi2 to inventory&quot;</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>git<span class="w"> </span>push
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>add<span class="w"> </span>ansible/inventory.ini
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;add pi2 to inventory&quot;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>git<span class="w"> </span>push
 </code></pre></div>
 <h3 id="16-create-its-unit-config">1.6 Create its unit config<a class="headerlink" href="#16-create-its-unit-config" title="Permanent link">&para;</a></h3>
 <p>Each rig has hardware-specific values that must not be shared:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cp<span class="w"> </span>ansible/host_vars/template.yml<span class="w"> </span>ansible/host_vars/pi2.yml
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>nano<span class="w"> </span>ansible/host_vars/pi2.yml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>cp<span class="w"> </span>ansible/host_vars/template.yml<span class="w"> </span>ansible/host_vars/pi2.yml
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>nano<span class="w"> </span>ansible/host_vars/pi2.yml
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">unit_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pi2</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">arena_width_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">arena_height_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">notes</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bench</span><span class="nv"> </span><span class="s">2,</span><span class="nv"> </span><span class="s">north</span><span class="nv"> </span><span class="s">window&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">unit_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pi2</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">arena_width_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">arena_height_cm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nt">notes</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bench</span><span class="nv"> </span><span class="s">2,</span><span class="nv"> </span><span class="s">north</span><span class="nv"> </span><span class="s">window&quot;</span>
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">These files are not committed</p>
@@ -1622,8 +1643,8 @@ somewhere outside the repo — see the
 <hr />
 <h2 id="part-2-bootstrap">Part 2 — Bootstrap<a class="headerlink" href="#part-2-bootstrap" title="Permanent link">&para;</a></h2>
 <p>Installs everything the rig needs. Run from the dev Pi:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml<span class="w"> </span>--limit<span class="w"> </span>pi2
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml<span class="w"> </span>--limit<span class="w"> </span>pi2
 </code></pre></div>
 <p>Drop <code>--limit pi2</code> to bootstrap every Pi in the inventory. The playbook is
 <strong>idempotent</strong> — running it on an already-configured Pi is safe and skips
@@ -1639,12 +1660,12 @@ whatever is already correct.</p>
 <p>Expect 2–5 minutes on a fresh Pi, mostly downloading.</p>
 <hr />
 <h2 id="part-3-verify">Part 3 — Verify<a class="headerlink" href="#part-3-verify" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-m<span class="w"> </span>ping
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-m<span class="w"> </span>ping
 </code></pre></div>
 <p>Every Pi should answer <code>pong</code>.</p>
 <p>Then on the rig itself, with its monitor attached:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>python3<span class="w"> </span>recorder_app/main.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python3<span class="w"> </span>recorder_app/main.py
 </code></pre></div>
 <p>Check:</p>
 <ul>
@@ -1661,7 +1682,7 @@ and is stored in <code>config_app.yaml</code>, which is not shared between machi
 <hr />
 <h2 id="adding-several-pis-at-once">Adding several Pis at once<a class="headerlink" href="#adding-several-pis-at-once" title="Permanent link">&para;</a></h2>
 <p>Do Part 1 for all of them, then bootstrap in one pass:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml
 </code></pre></div>
 <p>Ansible works on all hosts in parallel, so ten Pis take about as long as one.</p>
 <hr />
@@ -1669,22 +1690,20 @@ and is stored in <code>config_app.yaml</code>, which is not shared between machi
 <h3 id="ssh-copy-id-hangs-after-source-of-keys-to-be-installed">ssh-copy-id hangs after "Source of key(s) to be installed"<a class="headerlink" href="#ssh-copy-id-hangs-after-source-of-keys-to-be-installed" title="Permanent link">&para;</a></h3>
 <p>The key file was found; nothing at that address is answering. The command is
 waiting for a TCP connection that will eventually time out.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">192</span>.168.1.102
-</code></pre></div>
-<p>If the ping fails, work through these in order:</p>
-<p><strong>Is the address right?</strong> Confirm which subnet your network actually uses —
-<code>192.168.0.x</code> and <code>10.0.0.x</code> are as common as <code>192.168.1.x</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ip<span class="w"> </span>route<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>default
-</code></pre></div>
-<p><strong>Find the Pi.</strong> If it still has its default hostname:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">2</span><span class="w"> </span>raspberrypi.local
-</code></pre></div>
-<p>Otherwise scan the network. Raspberry Pis are identifiable by their MAC vendor:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>nmap
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>nmap<span class="w"> </span>-sn<span class="w"> </span><span class="m">192</span>.168.1.0/24
-</code></pre></div>
+<p>If <code>pi1.local</code> didn't resolve in step 1.3 either, work through these in order:</p>
 <p><strong>Is it actually on the network?</strong> A Pi flashed without Wi-Fi credentials boots
 normally but never joins. Attach a monitor and check, or use ethernet.</p>
+<p><strong>Try the default hostname</strong>, in case the custom one from Imager didn't take:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">2</span><span class="w"> </span>raspberrypi.local
+</code></pre></div>
+<p><strong>Fall back to an IP scan.</strong> Confirm your subnet first —
+<code>192.168.0.x</code> and <code>10.0.0.x</code> are as common as <code>192.168.50.x</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>ip<span class="w"> </span>route<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>default
+</code></pre></div>
+<p>Then scan it. Raspberry Pis are identifiable by their MAC vendor:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>nmap
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>nmap<span class="w"> </span>-sn<span class="w"> </span><span class="m">192</span>.168.50.0/24
+</code></pre></div>
 <p><strong>Is SSH enabled?</strong> If "Enable SSH" was not ticked in Imager, the Pi is
 reachable by ping but refuses connections — that gives <code>Connection refused</code>
 rather than a hang.</p>

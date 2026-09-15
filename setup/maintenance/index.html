@@ -1418,7 +1418,7 @@
 <li><strong>Temperature above 80 °C</strong> — the Pi throttles, which also causes drops</li>
 </ul>
 <h3 id="monthly">Monthly<a class="headerlink" href="#monthly" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;git -C /home/acelab/RPi_recording log -1 --oneline&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;git -C /home/pi/RPi_recording log -1 --oneline&quot;</span>
 </code></pre></div>
 <p>All rigs should show the same commit. A rig on an older commit missed an update.</p>
 <hr />
@@ -1452,11 +1452,11 @@
 </tr>
 <tr>
 <td>Recordings this month</td>
-<td><code>-a "ls -la /home/acelab/Projects"</code></td>
+<td><code>-a "ls -la /home/pi/Projects"</code></td>
 </tr>
 <tr>
 <td>Current commit</td>
-<td><code>-a "git -C /home/acelab/RPi_recording log -1 --oneline"</code></td>
+<td><code>-a "git -C /home/pi/RPi_recording log -1 --oneline"</code></td>
 </tr>
 <tr>
 <td>Reboot</td>
@@ -1470,7 +1470,7 @@
 <p>Recordings are written to the rig's SD card and must be copied to the analysis
 machine. From the analysis machine:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rsync<span class="w"> </span>-avh<span class="w"> </span>--progress<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>acelab@192.168.1.101:~/Projects/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span>pi@pi1.local:~/Projects/<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>/path/to/analysis/data/pi1/
 </code></pre></div>
 <p><code>rsync</code> copies only what is missing, so it can be re-run safely and resumed
@@ -1485,7 +1485,7 @@ A <code>_metadata.yaml</code> without its footage is worthless, and vice versa.<
 </div>
 <h3 id="clearing-space">Clearing space<a class="headerlink" href="#clearing-space" title="Permanent link">&para;</a></h3>
 <p>After verifying the copy:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>acelab@192.168.1.101
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ssh<span class="w"> </span>-i<span class="w"> </span>~/.ssh/rig_recording<span class="w"> </span>pi@pi1.local
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/Projects/OLD_EXPERIMENT
 </code></pre></div>
 <p>Deliberately manual. Automating deletion of research data is not worth the risk.</p>
