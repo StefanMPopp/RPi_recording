@@ -24,7 +24,7 @@ Watch for:
 ### Monthly
 
 ```bash
-ansible pis -i inventory.ini -a "git -C /home/USERNAME/RPi_recording log -1 --oneline"
+ansible pis -i inventory.ini -a "git -C /home/pi/RPi_recording log -1 --oneline"
 ```
 
 All rigs should show the same commit. A rig on an older commit missed an update.
@@ -45,8 +45,8 @@ ansible pis -i inventory.ini -a "COMMAND"
 | Temperature | `-a "vcgencmd measure_temp"` |
 | Uptime | `-a "uptime"` |
 | Camera detected | `-a "libcamera-hello --list-cameras"` |
-| Recordings this month | `-a "ls -la /home/USERNAME/Projects"` |
-| Current commit | `-a "git -C /home/USERNAME/RPi_recording log -1 --oneline"` |
+| Recordings this month | `-a "ls -la /home/pi/Projects"` |
+| Current commit | `-a "git -C /home/pi/RPi_recording log -1 --oneline"` |
 | Reboot | `-a "reboot" --become` |
 
 Add `--limit piN` for a single Pi.
@@ -60,7 +60,7 @@ machine. From the analysis machine:
 
 ```bash
 rsync -avh --progress \
-    USERNAME@192.168.1.101:~/Projects/ \
+    pi@pi1.local:~/Projects/ \
     /path/to/analysis/data/pi1/
 ```
 
@@ -81,7 +81,7 @@ after an interruption.
 After verifying the copy:
 
 ```bash
-ssh -i ~/.ssh/insect_tracker USERNAME@192.168.1.101
+ssh -i ~/.ssh/rig_recording pi@pi1.local
 rm -rf ~/Projects/OLD_EXPERIMENT
 ```
 
@@ -111,7 +111,7 @@ SD cards are the least reliable part of the system.
 | Code | GitHub | Inherently |
 | Wiki source | GitHub, `main` branch | Inherently |
 | `ansible/host_vars/*.yml` | Dev Pi only | **Manual — do this** |
-| `~/.ssh/insect_tracker` | Dev Pi only | **Manual — do this** |
+| `~/.ssh/rig_recording` | Dev Pi only | **Manual — do this** |
 | `config_app.yaml` per rig | Each rig | Not needed; regenerate by recalibrating |
 | Recordings | Rig SD cards → analysis machine | Manual `rsync` |
 
@@ -121,7 +121,7 @@ configuration. Copy both somewhere safe:
 
 ```bash
 mkdir -p ~/rig_backup
-cp ~/.ssh/insect_tracker* ~/rig_backup/
+cp ~/.ssh/rig_recording* ~/rig_backup/
 cp -r ~/RPi_recording/ansible/host_vars ~/rig_backup/
 # then copy ~/rig_backup to a USB stick or institutional storage
 ```
@@ -130,7 +130,7 @@ This backup is what decides whether replacing a dead dev Pi is a half-hour job
 or an afternoon — see [Replace the dev Pi](replace_dev_pi.md).
 
 !!! danger "The private key is a credential"
-    `~/.ssh/insect_tracker` grants access to every rig and write access to the
+    `~/.ssh/rig_recording` grants access to every rig and write access to the
     repository. Back it up somewhere private, never into the repository itself.
 
 ---

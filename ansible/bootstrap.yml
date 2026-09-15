@@ -155,7 +155,7 @@
           [Desktop Entry]
           Type=Application
           Name=RPi Recorder
-          Comment=Record insect behaviour video
+          Comment=Record animal behaviour video
           Exec=python3 {{ repo_dir }}/recorder_app/main.py
           Path={{ repo_dir }}
           Icon=camera-video

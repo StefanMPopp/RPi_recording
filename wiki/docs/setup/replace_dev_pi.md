@@ -24,7 +24,7 @@ needs to move.
 |---|---|---|
 | Raspberry Pi OS, Git, Ansible | Reinstall | Trivially |
 | Repository clone | `git clone` | Trivially |
-| `~/.ssh/insect_tracker` | **Generated once** | Only by re-keying every rig |
+| `~/.ssh/rig_recording` | **Generated once** | Only by re-keying every rig |
 | `ansible/host_vars/*.yml` | **Written by hand** | Only by re-measuring every rig |
 | `git config` identity | Two commands | Trivially |
 | Recorder app dependencies | apt + pip | Trivially |
@@ -47,8 +47,8 @@ The good case. Roughly 30 minutes, most of it installation.
 
 ```bash
 mkdir -p ~/devpi_migration
-cp ~/.ssh/insect_tracker      ~/devpi_migration/
-cp ~/.ssh/insect_tracker.pub  ~/devpi_migration/
+cp ~/.ssh/rig_recording      ~/devpi_migration/
+cp ~/.ssh/rig_recording.pub  ~/devpi_migration/
 cp -r ~/RPi_recording/ansible/host_vars ~/devpi_migration/
 ```
 
@@ -73,10 +73,10 @@ reusing the existing key rather than making a new one.
 
 ```bash
 mkdir -p ~/.ssh
-cp /media/usb/devpi_migration/insect_tracker*  ~/.ssh/
+cp /media/usb/devpi_migration/rig_recording*  ~/.ssh/
 chmod 700 ~/.ssh
-chmod 600 ~/.ssh/insect_tracker
-chmod 644 ~/.ssh/insect_tracker.pub
+chmod 600 ~/.ssh/rig_recording
+chmod 644 ~/.ssh/rig_recording.pub
 ```
 
 !!! warning "The permissions are not optional"
@@ -92,7 +92,7 @@ nano ~/.ssh/config
 
 ```
 Host github.com
-    IdentityFile ~/.ssh/insect_tracker
+    IdentityFile ~/.ssh/rig_recording
     User git
 ```
 
@@ -133,7 +133,7 @@ Once verified, **wipe the old dev Pi rather than shelving it**. It holds a
 private key granting access to every rig and write access to the repository.
 
 ```bash
-shred -u ~/.ssh/insect_tracker
+shred -u ~/.ssh/rig_recording
 ```
 
 Then reflash the card if it is being reused.
@@ -160,7 +160,7 @@ that no longer exists.
 
 1. **GitHub → repository → Settings → Deploy keys**
 2. Delete the old key
-3. Add the new `~/.ssh/insect_tracker.pub`, **with write access ticked**
+3. Add the new `~/.ssh/rig_recording.pub`, **with write access ticked**
 
 ### 3. Clone the repository
 
@@ -177,13 +177,14 @@ This is the slow part. Each rig must be told about the new key, using its
 password:
 
 ```bash
-for ip in 101 102 103 104 105 106 107 108; do
-    ssh-copy-id -i ~/.ssh/insect_tracker.pub acelab@192.168.1.$ip
+for n in 1 2 3 4 5 6 7 8; do
+    ssh-copy-id -i ~/.ssh/rig_recording.pub pi@pi${n}.local
 done
 ```
 
-You will be prompted for the password once per rig. Adjust the numbers to match
-your `inventory.ini`.
+You will be prompted for the password once per rig. Adjust the range to match
+your `inventory.ini`. If your rigs use static IPs instead of hostnames,
+substitute those.
 
 Then verify:
 
@@ -216,7 +217,7 @@ Two shortcuts before measuring anything by hand:
 `config_unit.yaml` onto each Pi, and it survives:
 
 ```bash
-ansible pis -a "cat /home/acelab/RPi_recording/config_unit.yaml"
+ansible pis -a "cat /home/pi/RPi_recording/config_unit.yaml"
 ```
 
 That gives you `unit_id`, arena dimensions and notes for every rig at once —
@@ -243,7 +244,7 @@ To fully revoke it, on each rig remove the old key's line from
 
 ```bash
 ansible pis -m ansible.posix.authorized_key \
-  -a "user=acelab state=absent key='$(cat /path/to/old_key.pub)'"
+  -a "user=pi state=absent key='$(cat /path/to/old_key.pub)'"
 ```
 
 If the old public key is also lost, edit `~/.ssh/authorized_keys` on each rig
@@ -299,7 +300,7 @@ Two commands, occasionally:
 
 ```bash
 mkdir -p ~/devpi_backup
-cp ~/.ssh/insect_tracker* ~/RPi_recording/ansible/host_vars/*.yml ~/devpi_backup/
+cp ~/.ssh/rig_recording* ~/RPi_recording/ansible/host_vars/*.yml ~/devpi_backup/
 ```
 
 Copy that folder somewhere off the Pi — institutional storage, an encrypted USB
@@ -310,7 +311,7 @@ With that backup, replacing a dead dev Pi is the 30-minute
 [recovery](#recovery-old-machine-is-gone).
 
 !!! danger "Do not commit the private key"
-    `~/.ssh/insect_tracker` grants access to every rig and write access to the
+    `~/.ssh/rig_recording` grants access to every rig and write access to the
     repository. It must never go into Git, not even a private repository —
     Git history is very hard to purge, and a repository's audience tends to
     grow over time.

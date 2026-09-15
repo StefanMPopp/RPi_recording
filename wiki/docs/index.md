@@ -1,6 +1,6 @@
 # RPi Recording
 
-Video recording rigs for insect behaviour experiments — eight identical Raspberry Pi
+Video recording rigs for animal behaviour experiments — eight identical Raspberry Pi
 setups that record video or image stacks of a ~30 × 20 cm arena.
 
 ---

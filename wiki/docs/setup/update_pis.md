@@ -81,7 +81,7 @@ underneath a running app.
 ## Checking it worked
 
 ```bash
-ansible pis -i inventory.ini -a "git -C /home/USERNAME/RPi_recording log -1 --oneline"
+ansible pis -i inventory.ini -a "git -C /home/pi/RPi_recording log -1 --oneline"
 ```
 
 Every Pi should report the same commit as the dev Pi:
@@ -109,7 +109,7 @@ Someone edited code directly on a recording Pi. Discard the local edits — the
 repository is the source of truth:
 
 ```bash
-ssh -i ~/.ssh/insect_tracker USERNAME@192.168.1.10X
+ssh -i ~/.ssh/rig_recording pi@piN.local
 cd ~/RPi_recording
 git checkout -- .
 exit

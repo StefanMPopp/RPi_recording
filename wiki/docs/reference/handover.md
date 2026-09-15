@@ -12,10 +12,10 @@ mechanics of moving to a new machine or issuing a second key, see
 - [ ] **Dev Pi** — username and password
 - [ ] **Recording Pis** — username and password (same across rigs)
 - [ ] **Router** — admin login, for the static IP reservations
-- [ ] **SSH key** — `~/.ssh/insect_tracker` and `.pub` on the dev Pi
+- [ ] **SSH key** — `~/.ssh/rig_recording` and `.pub` on the dev Pi
 
 !!! danger "The SSH key is the critical item"
-    `~/.ssh/insect_tracker` grants access to every rig and write access to the
+    `~/.ssh/rig_recording` grants access to every rig and write access to the
     repository. It exists **only on the dev Pi** unless someone backed it up.
 
     If it is lost: generate a new one, add it to GitHub as a deploy key, and
@@ -31,14 +31,14 @@ Not in Git, by design. Copy them before the dev Pi is wiped:
 
 ```bash
 mkdir -p ~/rig_backup
-cp ~/.ssh/insect_tracker*                    ~/rig_backup/
+cp ~/.ssh/rig_recording*                    ~/rig_backup/
 cp -r ~/RPi_recording/ansible/host_vars      ~/rig_backup/
 cp ~/RPi_recording/ansible/inventory.ini     ~/rig_backup/
 ```
 
 | File | Why it matters |
 |---|---|
-| `~/.ssh/insect_tracker` | Access to everything |
+| `~/.ssh/rig_recording` | Access to everything |
 | `ansible/host_vars/*.yml` | Each rig's arena dimensions and identity |
 | `ansible/inventory.ini` | Which Pis exist and at which addresses (this one *is* in Git, but keep a copy) |
 

@@ -57,15 +57,15 @@ An SSH key lets this Pi connect to GitHub and to the rigs without typing a
 password each time.
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/insect_tracker
+ssh-keygen -t ed25519 -f ~/.ssh/rig_recording
 ```
 
 Press ++enter++ at both prompts for no passphrase. Two files appear:
 
 | File | Role |
 |---|---|
-| `~/.ssh/insect_tracker` | **Private key** — never leaves this Pi |
-| `~/.ssh/insect_tracker.pub` | **Public key** — safe to copy anywhere |
+| `~/.ssh/rig_recording` | **Private key** — never leaves this Pi |
+| `~/.ssh/rig_recording.pub` | **Public key** — safe to copy anywhere |
 
 Tell SSH to use it for GitHub:
 
@@ -77,7 +77,7 @@ Add:
 
 ```
 Host github.com
-    IdentityFile ~/.ssh/insect_tracker
+    IdentityFile ~/.ssh/rig_recording
     User git
 ```
 
@@ -88,7 +88,7 @@ Save with ++ctrl+o++, ++enter++, then ++ctrl+x++.
 ## 4. Give GitHub the public key
 
 ```bash
-cat ~/.ssh/insect_tracker.pub
+cat ~/.ssh/rig_recording.pub
 ```
 
 Copy the whole line, then on GitHub:
@@ -194,7 +194,7 @@ mkdocs gh-deploy
 ## 9. Set a static IP
 
 Reserve an address for the dev Pi in your router's admin panel, the same way as
-for the rigs. Suggested: `192.168.1.100`.
+for the rigs. Suggested: `192.168.50.100`.
 
 ---
 

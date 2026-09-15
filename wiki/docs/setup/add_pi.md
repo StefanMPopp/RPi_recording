@@ -33,36 +33,57 @@ libcamera-hello --list-cameras
 If the IMX477 is not listed, check the ribbon cable at both ends before
 anything else.
 
-### 1.3 Assign a static IP
+### 1.3 Find the Pi on the network
 
-Ansible finds each Pi by address, so it must not change.
+Ansible needs a stable address for each Pi. There are two ways to get one —
+use whichever works on your network.
 
-1. Let the Pi connect and wait a minute
-2. Open your router's admin panel (usually `192.168.1.1`)
-3. Find the Pi by its hostname
-4. Reserve an address for it
+=== "Hostname (recommended)"
+    Raspberry Pi OS runs mDNS by default, so a Pi is reachable at
+    `<hostname>.local` regardless of what address DHCP hands it — no router
+    access needed, and it keeps working even if the address changes after a
+    reboot. This is the more reliable option on institutional networks, which
+    often don't allow reserving addresses, and on a direct switch connection
+    with no router at all.
 
-Suggested scheme:
+    ```bash
+    ping -c 2 pi1.local
+    ```
 
-| Machine | Hostname | IP |
-|---|---|---|
-| Dev Pi | `devpi` | `192.168.1.100` |
-| Rig 1 | `pi1` | `192.168.1.101` |
-| Rig 2 | `pi2` | `192.168.1.102` |
-| … | … | … |
+    If that answers, use `pi1.local` as the address everywhere below.
+
+=== "Static IP"
+    If you have router access and prefer a fixed address:
+
+    1. Let the Pi connect and wait a minute
+    2. Open your router's admin panel
+    3. Find the Pi by its hostname
+    4. Reserve an address for it
+
+    Suggested scheme:
+
+    | Machine | Hostname | IP |
+    |---|---|---|
+    | Dev Pi | `devpi` | `192.168.50.100` |
+    | Rig 1 | `pi1` | `192.168.50.101` |
+    | Rig 2 | `pi2` | `192.168.50.102` |
+    | … | … | … |
+
+The rest of this page uses `pi1.local` — substitute a static IP if that's
+what you're using instead.
 
 ### 1.4 Copy the SSH key
 
 From the **dev Pi**, with the new rig's address:
 
 ```bash
-ssh-copy-id -i ~/.ssh/insect_tracker.pub USERNAME@192.168.1.102
+ssh-copy-id -i ~/.ssh/rig_recording.pub pi@pi1.local
 ```
 
 You will be asked for the rig's password once. Verify:
 
 ```bash
-ssh -i ~/.ssh/insect_tracker USERNAME@192.168.1.102
+ssh -i ~/.ssh/rig_recording pi@pi1.local
 ```
 
 You should land in a terminal on the new Pi. Type `exit` to return.
@@ -73,12 +94,12 @@ On the dev Pi, edit `~/RPi_recording/ansible/inventory.ini`:
 
 ```ini
 [pis]
-pi1 ansible_host=192.168.1.101
-pi2 ansible_host=192.168.1.102    # ← new line
+pi1 ansible_host=pi1.local
+pi2 ansible_host=pi2.local    # ← new line
 
 [pis:vars]
-ansible_user=USERNAME
-ansible_ssh_private_key_file=~/.ssh/insect_tracker
+ansible_user=pi
+ansible_ssh_private_key_file=~/.ssh/rig_recording
 ```
 
 Then commit it — the inventory is part of the project record:
@@ -183,12 +204,55 @@ Ansible works on all hosts in parallel, so ten Pis take about as long as one.
 
 ## If something fails
 
+### ssh-copy-id hangs after "Source of key(s) to be installed"
+
+The key file was found; nothing at that address is answering. The command is
+waiting for a TCP connection that will eventually time out.
+
+If `pi1.local` didn't resolve in step 1.3 either, work through these in order:
+
+**Is it actually on the network?** A Pi flashed without Wi-Fi credentials boots
+normally but never joins. Attach a monitor and check, or use ethernet.
+
+**Try the default hostname**, in case the custom one from Imager didn't take:
+
+```bash
+ping -c 2 raspberrypi.local
+```
+
+**Fall back to an IP scan.** Confirm your subnet first —
+`192.168.0.x` and `10.0.0.x` are as common as `192.168.50.x`:
+
+```bash
+ip route | grep default
+```
+
+Then scan it. Raspberry Pis are identifiable by their MAC vendor:
+
+```bash
+sudo apt install -y nmap
+nmap -sn 192.168.50.0/24
+```
+
+**Is SSH enabled?** If "Enable SSH" was not ticked in Imager, the Pi is
+reachable by ping but refuses connections — that gives `Connection refused`
+rather than a hang.
+
+### ssh-copy-id asks for a password and rejects it
+
+The username is wrong. It is the one set in Imager when that Pi was flashed,
+not the one on the dev Pi — though keeping them the same across all machines
+avoids exactly this confusion. `ansible_user` in `inventory.ini` assumes they
+match.
+
+### Playbook failures
+
 Ansible names the failing task and host. Common causes:
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `UNREACHABLE` | Pi off, wrong IP, or key not copied | Repeat 1.3 and 1.4 |
-| `Permission denied` | SSH key missing | Repeat 1.4 |
+| `Permission denied` | SSH key missing, or wrong `ansible_user` | Repeat 1.4; check the username |
 | apt task fails | No internet on the Pi | Check its network |
 | Repo clone fails | Deploy key missing | See [dev Pi setup](dev_pi.md#4-give-github-the-public-key) |
 
