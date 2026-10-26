@@ -163,7 +163,7 @@ pushing, check by hand:
 - [ ] Load `example_metadata_list.csv` and step through it
 
 Logic that is not UI-bound *can* be tested directly, and is worth it for
-anything with real branching — CSV parsing, file naming, capacity maths:
+anything with real branching — CSV parsing, file naming, capacity math:
 
 ```bash
 python3 -c "
@@ -187,7 +187,7 @@ python3 recorder_app/main.py
 | Camera errors | `libcamera-hello --list-cameras`, ribbon cable |
 | Dropped frames | Queue depth in the status panel; write speed calibration |
 | UI freezes | Work being done on the Qt main thread instead of a worker |
-| Colours wrong | The YUV conversion constant in `camera.py` |
+| Colors wrong | The YUV conversion constant in `camera.py` |
 | Profile does not restore | A field added to `_collect_` but not `_apply_` |
 
 !!! danger "Never touch widgets from a worker thread"

@@ -11,7 +11,7 @@ No terminal use, no Git, no Ansible.
 2. Open the **recorder app** on the rig's monitor
 3. Check focus using the preview (++ctrl++ + scroll to zoom in)
 4. Fill in the metadata, or load a list of planned sessions from a CSV
-5. Choose resolution, framerate, colour mode and format
+5. Choose resolution, framerate, color mode and format
 6. Press **Start recording**
 7. Press ++q++ or **Stop recording** when finished
 
@@ -57,8 +57,8 @@ in any file browser or analysis script.
 ---
 
 !!! tip "The single most common mistake"
-    Recording in **colour** when greyscale would do. Greyscale files are about
+    Recording in **color** when grayscale would do. Grayscale files are about
     three times smaller for image stacks and roughly 2.5× smaller for MJPEG,
-    and tracking algorithms work on brightness anyway. Use colour only if the
-    analysis actually needs hue — for example telling apart colour-marked
+    and tracking algorithms work on brightness anyway. Use color only if the
+    analysis actually needs hue — for example telling apart color-marked
     individuals.

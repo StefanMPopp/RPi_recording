@@ -11,15 +11,15 @@ tracking than for viewing.
 
 **Intra-frame** (MJPEG, TIFF, PNG) compresses each frame independently. Every
 frame stands alone, decodes identically however you seek to it, and contains no
-information borrowed from its neighbours.
+information borrowed from its neighbors.
 
 **Inter-frame** (H.264) stores occasional full frames and describes the rest as
 *differences*. This is dramatically more efficient — and it concentrates its
 errors precisely where things move.
 
-For a tracker, that is the worst possible place to put an artefact. The moving
+For a tracker, that is the worst possible place to put an artifact. The moving
 animal is both the thing being measured and the thing the codec approximates
-most aggressively. Blocking artefacts around a moving subject shift the apparent
+most aggressively. Blocking artifacts around a moving subject shift the apparent
 centroid, and the error correlates with speed, which is often the variable of
 interest.
 
@@ -41,7 +41,7 @@ H.264.
 
 ## Size estimates
 
-Approximate, static scene, **greyscale**. Colour is roughly 2.5–3× more.
+Approximate, static scene, **grayscale**. Color is roughly 2.5–3× more.
 
 ### 2028 × 1520 (recommended for a full-arena view)
 
@@ -80,9 +80,9 @@ Dashes mark combinations where encoding cannot keep up regardless of card speed.
 ## Choosing
 
 ```
-Does the analysis need colour?
-├─ yes → Colour, and measure the maximum fps first
-└─ no  → Greyscale (default)
+Does the analysis need color?
+├─ yes → Color, and measure the maximum fps first
+└─ no  → Grayscale (default)
 
 How long is a recording?
 ├─ minutes    → MJPEG
@@ -109,10 +109,10 @@ Lossless. The app writes TIFFs **uncompressed** by default
 (`TIFF_COMPRESSION = "none"` in `constants.py`), because the priority is frame
 rate. OpenCV's own default would be LZW — about 15% smaller on typical footage
 but roughly ten times slower to write (measured ~207 ms against ~20 ms per 4K
-greyscale frame). `"lzw"` and `"deflate"` are available when file size matters
+grayscale frame). `"lzw"` and `"deflate"` are available when file size matters
 more.
 
-Which setting records faster depends on what limits the rig. At 4K greyscale a
+Which setting records faster depends on what limits the rig. At 4K grayscale a
 frame is 12.3 MB, so a card sustaining 90 MB/s caps uncompressed stacks near
 7 fps however fast the encoder is — while compressing spends CPU the Pi has
 little of. Use **Settings → Measure maximum fps** after changing it.
@@ -129,14 +129,14 @@ By default the app writes **uncompressed** PNGs (`PNG_MODE = "store"`), still
 normal lossless PNGs that every tool opens, about 4× faster to encode than
 OpenCV's compressed default and about 50% larger. Uncompressed PNG needs a
 recent OpenCV; on older builds it quietly falls back to the compressed default.
-Set `PNG_MODE = "default"` to favour file size.
+Set `PNG_MODE = "default"` to favor file size.
 
-On a Pi 4 at 4K greyscale, compressed PNG measured about 4–5 fps.
+On a Pi 4 at 4K grayscale, compressed PNG measured about 4–5 fps.
 
 ### H.264 — the caveat
 
 Hugely more efficient, and produces the smallest files by a wide margin. The
-compression artefacts land on moving subjects.
+compression artifacts land on moving subjects.
 
 Hardware-accelerated only at **1080p and below**: the Pi 4's encoder cannot
 handle more, and above that the app uses a software encoder that is *slower*
@@ -145,7 +145,7 @@ the Format ⓘ tooltip states which encoder you will get.
 
 If storage forces H.264:
 
-1. Record a short test clip of the actual behaviour
+1. Record a short test clip of the actual behavior
 2. Run the real tracking pipeline on it
 3. Compare against the same scene in MJPEG
 4. Only then commit an experiment to it

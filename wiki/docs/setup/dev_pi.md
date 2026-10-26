@@ -6,7 +6,7 @@
 
     **Replacing an existing dev Pi?** Use
     [Replace the dev Pi](replace_dev_pi.md) instead. Following this page
-    would generate a new SSH key that none of the rigs recognise.
+    would generate a new SSH key that none of the rigs recognize.
 
 The dev Pi is where code is written and from where all rigs are updated. It is
 the only machine that pushes to GitHub.

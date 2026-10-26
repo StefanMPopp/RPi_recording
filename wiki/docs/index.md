@@ -1,6 +1,6 @@
 # RPi Recording
 
-Video recording rigs for animal behaviour experiments — eight identical Raspberry Pi
+Video recording rigs for animal behavior experiments — eight identical Raspberry Pi
 setups that record video or image stacks of a ~30 × 20 cm arena.
 
 ---
@@ -58,7 +58,7 @@ Each of the eight rigs consists of:
 | Camera | Raspberry Pi HQ camera (Sony IMX477 sensor) |
 | Lens | 16 mm C-mount, with C–CS adapter ring |
 | Storage | 32–64 GB U30-rated SD card |
-| Lighting | LED panels on an aluminium extrusion frame |
+| Lighting | LED panels on an aluminum extrusion frame |
 | Arena | ~30 × 20 cm |
 
 One further Pi is the **dev Pi**. It is not a recording rig — it is where the

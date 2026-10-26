@@ -85,10 +85,10 @@ Things that are easy to get wrong and expensive to rediscover:
 4. **`1332 × 990` sees only ~66% of the scene.** It will crop a full-arena
    view. Use `2028 × 1520` for high framerates with the whole arena.
 
-5. **Greyscale unless colour is genuinely needed.** Three times smaller, no loss
+5. **Grayscale unless color is genuinely needed.** Three times smaller, no loss
    for tracking.
 
-6. **H.264 is risky for tracking.** Inter-frame compression puts artefacts
+6. **H.264 is risky for tracking.** Inter-frame compression puts artifacts
    exactly on moving subjects. Validate before committing an experiment to it.
 
 7. **Recalibrate write speed after any SD card swap.** Otherwise the SD card
@@ -115,7 +115,7 @@ Things that are easy to get wrong and expensive to rediscover:
 ## Current state and open work
 
 **Working:** the recorder app in full — preview with zoom and pan, four
-formats, greyscale and colour, metadata sidecars, profiles, CSV metadata lists
+formats, grayscale and color, metadata sidecars, profiles, CSV metadata lists
 with automatic advance, measured per-format maximum frame rates.
 
 **Not built yet:**

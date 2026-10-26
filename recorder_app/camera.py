@@ -112,7 +112,7 @@ class PiCamera:
         self._preview_running   = False
         self._preview_fps       = 10          # display refresh rate of the UI widget
         self._target_fps:  float | None = None   # sensor FrameRate — matches recording fps
-        self._preview_channels  = 3           # 1 = greyscale, 3 = colour
+        self._preview_channels  = 3           # 1 = grayscale, 3 = color
         # Channels the camera is configured to RECORD, or None while it runs
         # the preview configuration (or is stopped)
         self._recording_channels: int | None = None
@@ -195,9 +195,9 @@ class PiCamera:
             self.stop_preview()
             self.start_preview(callback, fps)
 
-    def set_colour_mode(self, channels: int) -> None:
+    def set_color_mode(self, channels: int) -> None:
         """
-        Set the preview/capture colour mode: 1 = greyscale, 3 = colour.
+        Set the preview/capture color mode: 1 = grayscale, 3 = color.
         Takes effect on the next frame — no stream restart needed, since
         this only changes how already-flowing YUV frames are interpreted.
         """
@@ -262,7 +262,7 @@ class PiCamera:
         self._camera_started = True
         # This is the preview configuration, not a recording one (fewer
         # buffers, different noise reduction), so prepare_for_recording()
-        # must reconfigure before any recording, colour included.
+        # must reconfigure before any recording, color included.
         self._recording_channels = None
 
         # Apply the recording framerate to the sensor if one has been set —
@@ -288,7 +288,7 @@ class PiCamera:
             try:
                 yuv_frame = self._camera.capture_array("lores")
                 if self._preview_channels == 1:
-                    # Greyscale: just the Y (luma) plane — no colour conversion,
+                    # Grayscale: just the Y (luma) plane — no color conversion,
                     # no risk of red/blue channel-order bugs, and cheaper per frame.
                     frame = self._yuv420_extract_y(yuv_frame)
                 else:
@@ -320,7 +320,7 @@ class PiCamera:
         directly to RGB uint8.
         Requires opencv: sudo apt install -y python3-opencv
 
-        Note: if colours still look wrong (e.g. red/blue swapped or a
+        Note: if colors still look wrong (e.g. red/blue swapped or a
         cyan/magenta tint) after this, picamera2's plane order may not match
         OpenCV's I420 assumption. Try COLOR_YUV2RGB_YV12 instead, which
         swaps the U/V plane order.
@@ -375,17 +375,17 @@ class PiCamera:
         Reconfigure the main stream to match what recording actually needs,
         BEFORE capture starts.
 
-        Without this, a greyscale recording still pulls a full 3-channel RGB
-        frame through the camera's colour pipeline (demosaic, colour
+        Without this, a grayscale recording still pulls a full 3-channel RGB
+        frame through the camera's color pipeline (demosaic, color
         correction, gamma) on every frame — a substantial ISP and memory-
-        bandwidth cost — and only discards the colour afterward in software.
-        That cost dwarfs the JPEG-encoding saving greyscale is meant to give,
-        which is why greyscale mode measured little faster than colour despite
+        bandwidth cost — and only discards the color afterward in software.
+        That cost dwarfs the JPEG-encoding saving grayscale is meant to give,
+        which is why grayscale mode measured little faster than color despite
         encoding a third of the data: the expensive part was never skipped.
 
-        Requesting the main stream as YUV420 for a greyscale recording and
+        Requesting the main stream as YUV420 for a grayscale recording and
         taking only the Y plane (the same trick already used for the lores
-        preview stream) skips that colour pipeline entirely. Call this once,
+        preview stream) skips that color pipeline entirely. Call this once,
         immediately before a recording starts; call it again before the next
         one, since it may need switching back.
 
@@ -454,9 +454,9 @@ class PiCamera:
     # the pool has to outlast the deepest the queue can get, or a buffer would
     # be overwritten while a queued frame still references it.
     #
-    # Capped by total bytes rather than a fixed count, because a 4K colour
-    # frame is 37 MB — a count that is reasonable for greyscale would reserve
-    # most of the Pi's RAM for colour. Above the cap, pooling is skipped and
+    # Capped by total bytes rather than a fixed count, because a 4K color
+    # frame is 37 MB — a count that is reasonable for grayscale would reserve
+    # most of the Pi's RAM for color. Above the cap, pooling is skipped and
     # frames are allocated per frame: slower, but correct, and only
     # reached at resolutions where allocation is a small share of the cost.
     _BUFFER_POOL_MAX_BYTES = 320 * 1024 * 1024
@@ -535,10 +535,10 @@ class PiCamera:
         into it: wait_ms (for the camera to deliver), copy_ms (out of the
         camera buffer) and preview_ms (preview conversion).
 
-        recording_frame is 2D greyscale when channels == 1, else 3D BGR —
+        recording_frame is 2D grayscale when channels == 1, else 3D BGR —
         picamera2's "RGB888" is B,G,R in memory, which is the order OpenCV
         and ffmpeg's bgr24 expect, so writers use it without conversion.
-        preview_frame is always RGB (or greyscale) for display.
+        preview_frame is always RGB (or grayscale) for display.
         """
         request_start = time.perf_counter()
         request = self._camera.capture_request()
@@ -591,13 +591,13 @@ class PiCamera:
             luma = source[:height, :width]
             if channels == 1:
                 return self._copy_into_pool(luma)
-            # Colour requested but the stream is YUV420 (prepare_for_recording
+            # Color requested but the stream is YUV420 (prepare_for_recording
             # was not called): deliver the luma as three equal channels.
             return np.stack([luma] * 3, axis=2)
 
         pixels = source[:height, :width, :3]
         if channels == 1:
-            return self._bgr_to_grey_fallback(np.ascontiguousarray(pixels))
+            return self._bgr_to_gray_fallback(np.ascontiguousarray(pixels))
         return self._copy_into_pool(pixels)
 
     def _copy_into_pool(self, view: np.ndarray) -> np.ndarray:
@@ -608,11 +608,11 @@ class PiCamera:
         return buffer
 
     @staticmethod
-    def _bgr_to_grey_fallback(bgr_frame: np.ndarray) -> np.ndarray:
+    def _bgr_to_gray_fallback(bgr_frame: np.ndarray) -> np.ndarray:
         """
-        Convert a BGR frame to greyscale. Only used if capture_frame is
+        Convert a BGR frame to grayscale. Only used if capture_frame is
         called with channels == 1 before prepare_for_recording() has run —
-        correct, but pays the full-colour capture cost this method exists to
+        correct, but pays the full-color capture cost this method exists to
         avoid. A sign prepare_for_recording() was skipped somewhere.
         """
         import cv2
@@ -663,7 +663,7 @@ class StubCamera:
     def set_mode(self, mode: SensorMode) -> None:
         self._active_mode = mode
 
-    def set_colour_mode(self, channels: int) -> None:
+    def set_color_mode(self, channels: int) -> None:
         self._preview_channels = channels
 
     def set_capture_fps(self, fps: float) -> None:

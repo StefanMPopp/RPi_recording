@@ -12,7 +12,7 @@ question:
     across and the rigs never know anything changed.
 
     **No** → [Recovery](#recovery-old-machine-is-gone). You must generate a new
-    key and re-authorise all eight rigs using their passwords.
+    key and re-authorize all eight rigs using their passwords.
 
 Read [what makes a dev Pi](#what-makes-a-dev-pi) first if you are unsure what
 needs to move.
@@ -161,9 +161,9 @@ Budget an afternoon, mostly for step 4.
 ### 1. Build a new dev Pi from scratch
 
 Follow [Set up the dev Pi](dev_pi.md) in full, **including** generating a new
-key. You now have a working machine with a key no rig recognises.
+key. You now have a working machine with a key no rig recognizes.
 
-### 2. Authorise the new keys on GitHub
+### 2. Authorize the new keys on GitHub
 
 Following [Set up the dev Pi](dev_pi.md) "in full" generated BOTH keys fresh —
 the dev Pi's write key and the rigs' read-only key. Both old deploy key
@@ -188,7 +188,7 @@ git clone git@github.com:StefanMPopp/RPi_recording.git ~/RPi_recording
 `inventory.ini` comes back with the clone, so you already know every rig's
 address.
 
-### 4. Re-authorise every rig
+### 4. Re-authorize every rig
 
 This is the slow part. Each rig must be told about the new key, using its
 password:
@@ -265,7 +265,7 @@ ansible pis -m ansible.posix.authorized_key \
 ```
 
 If the old public key is also lost, edit `~/.ssh/authorized_keys` on each rig
-by hand and delete the unrecognised entry.
+by hand and delete the unrecognized entry.
 
 ---
 

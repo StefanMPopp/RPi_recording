@@ -30,7 +30,7 @@ The SD card cannot write as fast as the camera produces data. The warning panel
 lists fixes in order of effectiveness; see
 [maximum frame rate](choosing_settings.md#maximum-frame-rate).
 
-Quickest wins: greyscale, then lower framerate.
+Quickest wins: grayscale, then lower framerate.
 
 If drops appear at settings that used to work:
 
@@ -50,10 +50,10 @@ If drops appear at settings that used to work:
 
 ---
 
-## Colours look wrong
+## Colors look wrong
 
 If the preview shows a blue or orange cast, that is white balance responding to
-the LED panels, not a fault. It does not affect greyscale recording at all.
+the LED panels, not a fault. It does not affect grayscale recording at all.
 
 If red and blue appear **swapped**, that is a software bug — report it with a
 photo of the screen.

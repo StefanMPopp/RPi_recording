@@ -43,9 +43,31 @@ def load_app_config(config_file: Path = Path(DEFAULT_CONFIG_PATH)) -> dict:
         if not isinstance(loaded_config, dict):
             loaded_config = {}
 
+    _migrate_throughput_keys(loaded_config)
+
     # Merge with defaults so missing keys are always present
     default_config = _default_app_config()
     return _deep_merge(default_config, loaded_config)
+
+
+# Spellings used by app versions before 1.0, still accepted when reading
+# configs and profiles so measurements and saved settings carry over.
+_LEGACY_KEY_PARTS   = {"_grey_": "_gray_", "_colour_": "_color_"}
+LEGACY_COLOR_MODES  = {"Greyscale": "Grayscale", "Colour": "Color"}
+
+
+def _migrate_throughput_keys(config: dict) -> None:
+    """Rename throughput entries stored under pre-1.0 key spellings."""
+    throughput = config.get("throughput")
+    if not isinstance(throughput, dict):
+        return
+    for key in list(throughput):
+        new_key = key
+        for old_part, new_part in _LEGACY_KEY_PARTS.items():
+            new_key = new_key.replace(old_part, new_part)
+        if new_key != key:
+            throughput.setdefault(new_key, throughput[key])
+            del throughput[key]
 
 
 def save_app_config(config: dict, config_file: Path = Path(DEFAULT_CONFIG_PATH)) -> None:
@@ -59,7 +81,7 @@ def _default_app_config() -> dict:
             "sd_write_speed_mbs": None,       # populated after first benchmark
             "sd_write_speed_measured_date": None,
         },
-        # Measured maximum sustained fps, keyed by resolution+colour+format.
+        # Measured maximum sustained fps, keyed by resolution+color+format.
         # Populated by Settings -> Measure maximum fps. Machine-specific, so
         # not committed — though unlike SD write speed, which depends on the
         # individual card, these depend on the Pi model and camera and are
@@ -104,7 +126,7 @@ def default_profile() -> dict:
         "camera": {
             "sensor_mode":     None,          # None = first available mode
             "fps":             None,          # None = use sensor mode maximum
-            "colour_mode":     "Greyscale",   # "Greyscale" or "Colour"
+            "color_mode":     "Grayscale",   # "Grayscale" or "Color"
         },
         "metadata": {
             **METADATA_DEFAULTS,

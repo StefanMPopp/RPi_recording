@@ -20,6 +20,7 @@ During recording the right panel switches to a live status view.
 from __future__ import annotations
 
 import html
+import textwrap
 import os      # only for os.access — pathlib has no equivalent
 import time
 from dataclasses import replace
@@ -43,9 +44,10 @@ from constants  import (
     FILENAME_FIELDS, DEFAULT_FIELD_ORDER,
     PREVIEW_WIDTH,
     METADATA_DEFAULTS,
-    COLOUR_MODES, DEFAULT_COLOUR_MODE,
+    COLOR_MODES, DEFAULT_COLOR_MODE,
 )
-from config     import load_app_config, save_app_config, load_profile, save_profile, default_profile
+from config     import (load_app_config, save_app_config, load_profile, save_profile,
+                        default_profile, LEGACY_COLOR_MODES)
 from benchmark  import get_free_space_gb
 from camera     import make_camera, SensorMode
 from record     import (RecordingSession, RecordingSettings,
@@ -59,12 +61,12 @@ from formats    import OUTPUT_FORMATS, DEFAULT_FORMAT, OutputFormat, find_format
 
 
 # =============================================================================
-# Colour palette  (dark, instrument-style)
+# Color palette  (dark, instrument-style)
 # =============================================================================
 # Inspired by oscilloscope / scientific instrument UIs:
-# near-black background, cool grey panels, amber accent for live data.
+# near-black background, cool gray panels, amber accent for live data.
 
-COLOUR = {
+COLOR = {
     "bg":           "#1A1D21",   # main window background
     "panel":        "#22262C",   # panel / groupbox background
     "border":       "#353A42",   # subtle borders
@@ -80,19 +82,19 @@ COLOUR = {
 
 STYLE_SHEET = f"""
     QMainWindow, QWidget {{
-        background-color: {COLOUR["bg"]};
-        color: {COLOUR["text"]};
+        background-color: {COLOR["bg"]};
+        color: {COLOR["text"]};
         font-family: "DejaVu Sans", "Segoe UI", sans-serif;
         font-size: 13px;
     }}
     QGroupBox {{
-        background-color: {COLOUR["panel"]};
-        border: 1px solid {COLOUR["border"]};
+        background-color: {COLOR["panel"]};
+        border: 1px solid {COLOR["border"]};
         border-radius: 6px;
         margin-top: 10px;
         padding: 8px;
         font-size: 11px;
-        color: {COLOUR["text_dim"]};
+        color: {COLOR["text_dim"]};
         text-transform: uppercase;
         letter-spacing: 0.08em;
     }}
@@ -102,31 +104,31 @@ STYLE_SHEET = f"""
         padding: 0 6px;
     }}
     QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
-        background-color: {COLOUR["bg"]};
-        border: 1px solid {COLOUR["border"]};
+        background-color: {COLOR["bg"]};
+        border: 1px solid {COLOR["border"]};
         border-radius: 4px;
         padding: 4px 8px;
-        color: {COLOUR["text"]};
-        selection-background-color: {COLOUR["accent"]};
+        color: {COLOR["text"]};
+        selection-background-color: {COLOR["accent"]};
     }}
     QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {{
         background-color: #1B1E23;
         color: #4A4F58;
-        border: 1px dashed {COLOUR["border"]};
+        border: 1px dashed {COLOR["border"]};
     }}
     QComboBox::drop-down {{ border: none; }}
     QPushButton {{
-        background-color: {COLOUR["panel"]};
-        border: 1px solid {COLOUR["border"]};
+        background-color: {COLOR["panel"]};
+        border: 1px solid {COLOR["border"]};
         border-radius: 4px;
         padding: 6px 14px;
-        color: {COLOUR["text"]};
+        color: {COLOR["text"]};
     }}
-    QPushButton:hover  {{ border-color: {COLOUR["accent"]}; }}
-    QPushButton:pressed {{ background-color: {COLOUR["border"]}; }}
+    QPushButton:hover  {{ border-color: {COLOR["accent"]}; }}
+    QPushButton:pressed {{ background-color: {COLOR["border"]}; }}
     QLabel {{ background: transparent; }}
     QRadioButton {{
-        color: {COLOUR["text"]};
+        color: {COLOR["text"]};
         font-size: 12px;
         spacing: 5px;
     }}
@@ -134,27 +136,27 @@ STYLE_SHEET = f"""
         width: 12px;
         height: 12px;
         border-radius: 7px;
-        border: 1px solid {COLOUR["border"]};
-        background-color: {COLOUR["bg"]};
+        border: 1px solid {COLOR["border"]};
+        background-color: {COLOR["bg"]};
     }}
     QRadioButton::indicator:checked {{
-        background-color: {COLOUR["accent"]};
-        border: 3px solid {COLOUR["bg"]};
-        outline: 1px solid {COLOUR["accent"]};
+        background-color: {COLOR["accent"]};
+        border: 3px solid {COLOR["bg"]};
+        outline: 1px solid {COLOR["accent"]};
     }}
-    QSplitter::handle {{ background-color: {COLOUR["border"]}; width: 1px; }}
+    QSplitter::handle {{ background-color: {COLOR["border"]}; width: 1px; }}
     QScrollArea {{ border: none; }}
-    QStatusBar {{ background-color: {COLOUR["panel"]}; color: {COLOUR["text_dim"]}; }}
+    QStatusBar {{ background-color: {COLOR["panel"]}; color: {COLOR["text_dim"]}; }}
     QMenuBar {{
-        background-color: {COLOUR["panel"]};
-        border-bottom: 1px solid {COLOUR["border"]};
+        background-color: {COLOR["panel"]};
+        border-bottom: 1px solid {COLOR["border"]};
     }}
-    QMenuBar::item:selected {{ background-color: {COLOUR["border"]}; }}
+    QMenuBar::item:selected {{ background-color: {COLOR["border"]}; }}
     QMenu {{
-        background-color: {COLOUR["panel"]};
-        border: 1px solid {COLOUR["border"]};
+        background-color: {COLOR["panel"]};
+        border: 1px solid {COLOR["border"]};
     }}
-    QMenu::item:selected {{ background-color: {COLOUR["border"]}; }}
+    QMenu::item:selected {{ background-color: {COLOR["border"]}; }}
 """
 
 
@@ -177,11 +179,11 @@ class MonospacePopup(QFrame):
         self.setStyleSheet(f"""
             QFrame {{
                 background-color: #2A2F38;
-                border: 1px solid {COLOUR['accent']};
+                border: 1px solid {COLOR['accent']};
                 border-radius: 4px;
             }}
             QLabel {{
-                color: {COLOUR['text']};
+                color: {COLOR['text']};
                 font-family: "DejaVu Sans Mono", "Courier New", monospace;
                 font-size: 12px;
                 padding: 10px 14px;
@@ -293,9 +295,9 @@ class _DragHandle(QLabel):
         self.setToolTip("Drag to reorder — the order sets the file name")
         self.setStyleSheet(f"""
             QLabel {{
-                background-color: {COLOUR['bg']};
-                color: {COLOUR['text_dim']};
-                border: 1px solid {COLOUR['border']};
+                background-color: {COLOR['bg']};
+                color: {COLOR['text_dim']};
+                border: 1px solid {COLOR['border']};
                 border-radius: 3px;
                 font-size: 13px;
             }}
@@ -320,7 +322,7 @@ class FixedFieldRow(QWidget):
 
         label = QLabel(label_text)
         label.setFixedWidth(78)
-        label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
 
         self.value_edit = QLineEdit(value)
         self.value_edit.setPlaceholderText("NA")
@@ -368,7 +370,7 @@ class TreatmentRow(QWidget):
         remove_button.setFixedSize(22, 22)
         remove_button.setToolTip("Remove this treatment")
         remove_button.setStyleSheet(
-            f"color: {COLOUR['text_dim']}; font-size: 11px; padding: 0;"
+            f"color: {COLOR['text_dim']}; font-size: 11px; padding: 0;"
         )
         remove_button.clicked.connect(lambda: self.removed.emit(self))
 
@@ -529,13 +531,13 @@ class PreviewWidget(QLabel):
     Displays numpy frames from the camera preview stream.
 
     Mouse controls:
-      Ctrl + scroll   zoom in/out, centred on the cursor
+      Ctrl + scroll   zoom in/out, centerd on the cursor
       scroll          pan up/down   (when zoomed in)
       Shift + scroll  pan left/right (when zoomed in)
 
-    The view is described by a zoom factor and a centre point in normalised
-    frame coordinates. The centre is clamped so the visible crop can never
-    extend past the frame edge — clamping the centre rather than the crop
+    The view is described by a zoom factor and a center point in normalized
+    frame coordinates. The center is clamped so the visible crop can never
+    extend past the frame edge — clamping the center rather than the crop
     is what prevents the view from jumping when you pan into a corner.
     """
 
@@ -552,14 +554,14 @@ class PreviewWidget(QLabel):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet(
-            f"background-color: #0A0C0E; border: 1px solid {COLOUR['border']}; "
+            f"background-color: #0A0C0E; border: 1px solid {COLOR['border']}; "
             f"border-radius: 4px;"
         )
         self.setText("No camera signal")
 
         self._zoom_factor   = 1.0
-        self._centre_x      = 0.5    # normalised centre of the visible region
-        self._centre_y      = 0.5
+        self._center_x      = 0.5    # normalized center of the visible region
+        self._center_y      = 0.5
         self._current_frame: np.ndarray | None = None
 
     # ── Frame ingestion ────────────────────────────────────────────────────────
@@ -574,7 +576,7 @@ class PreviewWidget(QLabel):
 
         frame = self._current_frame
 
-        # Normalise to RGB — the camera may deliver greyscale (2D) or RGBA
+        # Normalize to RGB — the camera may deliver grayscale (2D) or RGBA
         if frame.ndim == 2:
             frame = np.stack([frame, frame, frame], axis=2)
         elif frame.shape[2] == 4:
@@ -585,9 +587,9 @@ class PreviewWidget(QLabel):
         if self._zoom_factor > 1.0:
             crop_width  = max(1, int(frame_width  / self._zoom_factor))
             crop_height = max(1, int(frame_height / self._zoom_factor))
-            left = int(self._centre_x * frame_width  - crop_width  / 2)
-            top  = int(self._centre_y * frame_height - crop_height / 2)
-            # Centre is already clamped, so these are belt-and-braces only
+            left = int(self._center_x * frame_width  - crop_width  / 2)
+            top  = int(self._center_y * frame_height - crop_height / 2)
+            # Center is already clamped, so these are belt-and-braces only
             left = max(0, min(left, frame_width  - crop_width))
             top  = max(0, min(top,  frame_height - crop_height))
             frame = frame[top:top + crop_height, left:left + crop_width]
@@ -614,23 +616,23 @@ class PreviewWidget(QLabel):
 
     # ── View manipulation ──────────────────────────────────────────────────────
 
-    def _clamp_centre(self) -> None:
+    def _clamp_center(self) -> None:
         """
         Keep the visible region inside the frame. At zoom Z the visible region
-        is 1/Z of the frame, so the centre must stay at least half of that
+        is 1/Z of the frame, so the center must stay at least half of that
         away from each edge.
         """
         half_extent = 0.5 / self._zoom_factor
         lower, upper = half_extent, 1.0 - half_extent
         if lower >= upper:          # fully zoomed out
-            self._centre_x = self._centre_y = 0.5
+            self._center_x = self._center_y = 0.5
         else:
-            self._centre_x = max(lower, min(self._centre_x, upper))
-            self._centre_y = max(lower, min(self._centre_y, upper))
+            self._center_x = max(lower, min(self._center_x, upper))
+            self._center_y = max(lower, min(self._center_y, upper))
 
     def reset_view(self) -> None:
         self._zoom_factor = 1.0
-        self._centre_x = self._centre_y = 0.5
+        self._center_x = self._center_y = 0.5
         self.zoom_changed.emit(self._zoom_factor)
         self._render()
 
@@ -658,21 +660,21 @@ class PreviewWidget(QLabel):
         if new_zoom == old_zoom:
             return
 
-        # Cursor position as a fraction of the widget, offset from its centre
+        # Cursor position as a fraction of the widget, offset from its center
         cursor    = event.position()
         offset_x  = (cursor.x() / max(1, self.width()))  - 0.5
         offset_y  = (cursor.y() / max(1, self.height())) - 0.5
 
         # Frame coordinate currently under the cursor
-        frame_x = self._centre_x + offset_x / old_zoom
-        frame_y = self._centre_y + offset_y / old_zoom
+        frame_x = self._center_x + offset_x / old_zoom
+        frame_y = self._center_y + offset_y / old_zoom
 
-        # Move the centre so that same coordinate stays under the cursor
-        self._centre_x = frame_x - offset_x / new_zoom
-        self._centre_y = frame_y - offset_y / new_zoom
+        # Move the center so that same coordinate stays under the cursor
+        self._center_x = frame_x - offset_x / new_zoom
+        self._center_y = frame_y - offset_y / new_zoom
         self._zoom_factor = new_zoom
 
-        self._clamp_centre()
+        self._clamp_center()
         self.zoom_changed.emit(self._zoom_factor)
         self._render()
 
@@ -682,11 +684,11 @@ class PreviewWidget(QLabel):
             return   # nothing to pan when the whole frame is visible
 
         step = self._PAN_STEP / self._zoom_factor
-        # Scrolling up (positive notches) moves the view up, i.e. centre down
-        self._centre_x -= dx_notches * step
-        self._centre_y -= dy_notches * step
+        # Scrolling up (positive notches) moves the view up, i.e. center down
+        self._center_x -= dx_notches * step
+        self._center_y -= dy_notches * step
 
-        self._clamp_centre()
+        self._clamp_center()
         self._render()
 
     def mouseDoubleClickEvent(self, event) -> None:
@@ -710,11 +712,16 @@ def _format_minutes(minutes) -> str:
     return f"{minutes:.0f} min"
 
 
+# Column widths of the capacity table (format, max fps, limit, MB/frame, fits)
+_CAPACITY_COLUMN_WIDTHS = (20, 9, 12, 10, 14)
+CAPACITY_TABLE_WIDTH    = sum(_CAPACITY_COLUMN_WIDTHS)
+
+
 def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
                           measurements: dict, write_speed_mbs,
                           free_space_gb) -> str:
     """
-    One table for the current resolution and colour mode: for every format,
+    One table for the current resolution and color mode: for every format,
     the highest frame rate it can sustain, what stops it going faster, and how
     long a recording fits on the card.
 
@@ -722,20 +729,21 @@ def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
     key if that format has not been measured). Everything shown comes from
     measurements on this machine; nothing is estimated.
     """
-    colour_name = "greyscale" if channels == 1 else "colour"
+    color_name = "grayscale" if channels == 1 else "color"
     heading = (f"Measured capacity — {sensor_mode.width}×{sensor_mode.height}, "
-               f"{colour_name}")
+               f"{color_name}")
 
     if not measurements:
         return (f"{heading}\n\n"
-                f"Not measured yet for this resolution and colour mode.\n"
+                f"Not measured yet for this resolution and color mode.\n"
                 f"Settings → Measure maximum fps  (about 25 s)")
 
-    widths = (20, 9, 12, 10, 14)
+    widths = _CAPACITY_COLUMN_WIDTHS
     header = (f"{'Format':<{widths[0]}}{'Max fps':>{widths[1]}}"
               f"{'Limited by':>{widths[2]}}{'MB/frame':>{widths[3]}}"
               f"{'Fits on card':>{widths[4]}}")
-    rule = "─" * sum(widths)
+    table_width = CAPACITY_TABLE_WIDTH
+    rule = "─" * table_width
     lines = [heading, rule, header, rule]
 
     for output_format in OUTPUT_FORMATS:
@@ -755,16 +763,20 @@ def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
 
     lines.append(rule)
     dates = sorted({m.get("measured_on", "?") for m in measurements.values()})
-    lines.append(f"Recording time at {selected_fps:.1f} fps (or the max, if lower). "
-                 f"Measured {', '.join(dates)}.")
+    notes = [f"Recording time at {selected_fps:.1f} fps (or the max, if lower). "
+             f"Measured {', '.join(dates)}."]
     if write_speed_mbs:
-        lines.append(f"Card: {free_space_gb or 0:.1f} GB free, writes "
+        notes.append(f"Card: {free_space_gb or 0:.1f} GB free, writes "
                      f"{write_speed_mbs:.0f} MB/s (85% of that counted as usable).")
     else:
-        lines.append("SD card speed not measured, so it is not counted as a limit "
+        notes.append("SD card speed not measured, so it is not counted as a limit "
                      "— Settings → Recalibrate write speed.")
-    lines.append(f"H.264 here: {h264_encoder_note(sensor_mode.width, sensor_mode.height, channels)}")
+    notes.append(f"H.264 here: {h264_encoder_note(sensor_mode.width, sensor_mode.height, channels)}")
+    # Wrapped to the table's width, so the popup and the measurement report
+    # are no wider than the table itself
+    lines.extend(textwrap.fill(note, table_width) for note in notes)
     return "\n".join(lines)
+
 
 
 class MainWindow(QMainWindow):
@@ -806,7 +818,7 @@ class MainWindow(QMainWindow):
         self._build_menu()
         self._build_ui()
         self._populate_sensor_modes()          # also sets initial fps on the camera
-        self._camera.set_colour_mode(self._current_channels())
+        self._camera.set_color_mode(self._current_channels())
         self._on_format_changed(self._format_combo.currentIndex())
         self._on_scale_mode_changed()          # sets which scale field is editable
         self._on_auto_name_toggled(0)          # applies auto file naming
@@ -911,11 +923,11 @@ class MainWindow(QMainWindow):
         header_row = QHBoxLayout()
         header = QLabel("Live preview")
         header.setStyleSheet(
-            f"color: {COLOUR['text_dim']}; font-size: 11px; text-transform: uppercase;"
+            f"color: {COLOR['text_dim']}; font-size: 11px; text-transform: uppercase;"
         )
         self._zoom_label = QLabel("zoom 1.0×")
         self._zoom_label.setStyleSheet(
-            f"color: {COLOUR['text_dim']}; font-size: 11px; "
+            f"color: {COLOR['text_dim']}; font-size: 11px; "
             f"font-family: 'DejaVu Sans Mono', monospace;"
         )
         self._zoom_reset_button = QPushButton("Reset view")
@@ -935,7 +947,7 @@ class MainWindow(QMainWindow):
             "Ctrl + scroll: zoom     ·     scroll: pan up/down     ·     "
             "Shift + scroll: pan left/right     ·     double-click: reset"
         )
-        zoom_hint.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 11px;")
+        zoom_hint.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 11px;")
         zoom_hint.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(zoom_hint)
 
@@ -950,7 +962,7 @@ class MainWindow(QMainWindow):
         is_zoomed = zoom_factor > 1.001
         self._zoom_reset_button.setVisible(is_zoomed)
         self._zoom_label.setStyleSheet(
-            f"color: {COLOUR['accent'] if is_zoomed else COLOUR['text_dim']}; "
+            f"color: {COLOR['accent'] if is_zoomed else COLOR['text_dim']}; "
             f"font-size: 11px; font-family: 'DejaVu Sans Mono', monospace;"
         )
 
@@ -1004,18 +1016,15 @@ class MainWindow(QMainWindow):
         self._fps_spin.setFixedWidth(80)
         self._fps_spin.valueChanged.connect(self._on_fps_changed)
         fps_unit_label = QLabel("fps")
-        fps_unit_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        fps_unit_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         self._fps_max_label = QLabel("")
-        self._fps_max_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        self._fps_max_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         self._fps_info_btn = InfoButton(
-            "The sensor mode sets the MAXIMUM framerate for that\n"
-            "resolution and bit depth. Any lower framerate can be used.\n\n"
-            "Low framerates are useful for:\n"
-            "  · Timelapse-style image stacks (e.g. 1 fps or below)\n"
-            "  · Long recordings where storage is the constraint\n"
-            "  · Staying within the SD card's write budget at high resolution\n\n"
-            "Lowering fps reduces the write rate proportionally, so it is the\n"
-            "simplest way to gain write headroom without losing resolution."
+            "Max fps is set by the sensor mode, and in practice by\n"
+            "the slowest of camera, encoder and SD card. The (i)\n"
+            "next to Format shows the measured limits.\n\n"
+            "Slow movements need only a low fps, which gives\n"
+            "smaller files and longer recordings."
         )
         fps_row.addWidget(self._fps_spin)
         fps_row.addWidget(fps_unit_label)
@@ -1025,33 +1034,33 @@ class MainWindow(QMainWindow):
         layout.addLayout(fps_row, row, 1)
         row += 1
 
-        # Colour mode — greyscale uses only the Y plane (1 byte/px instead of 3)
-        layout.addWidget(self._dim_label("Colour"), row, 0)
-        colour_row = QHBoxLayout()
-        colour_row.setSpacing(6)
-        self._colour_combo = QComboBox()
-        self._colour_combo.setFixedWidth(120)
-        for colour_label, _channels in COLOUR_MODES:
-            self._colour_combo.addItem(colour_label)
-        default_index = self._colour_combo.findText(DEFAULT_COLOUR_MODE)
+        # Color mode — grayscale uses only the Y plane (1 byte/px instead of 3)
+        layout.addWidget(self._dim_label("Color"), row, 0)
+        color_row = QHBoxLayout()
+        color_row.setSpacing(6)
+        self._color_combo = QComboBox()
+        self._color_combo.setFixedWidth(120)
+        for color_label, _channels in COLOR_MODES:
+            self._color_combo.addItem(color_label)
+        default_index = self._color_combo.findText(DEFAULT_COLOR_MODE)
         if default_index >= 0:
-            self._colour_combo.setCurrentIndex(default_index)
-        self._colour_combo.currentIndexChanged.connect(self._on_colour_mode_changed)
-        self._colour_info_btn = InfoButton(
-            "Greyscale records only the luma (brightness) plane:\n"
+            self._color_combo.setCurrentIndex(default_index)
+        self._color_combo.currentIndexChanged.connect(self._on_color_mode_changed)
+        self._color_info_btn = InfoButton(
+            "Grayscale records only the luma (brightness) plane:\n"
             "1 byte per pixel instead of 3.\n\n"
             "  · ~3× smaller files for TIFF and PNG stacks\n"
             "  · ~2.5× smaller for MJPEG\n"
             "  · Correspondingly more write headroom\n\n"
-            "Tracking algorithms work on brightness, not colour, so\n"
-            "greyscale loses nothing relevant and is the recommended\n"
-            "default. Choose Colour only if the analysis needs hue —\n"
-            "for example distinguishing colour-marked individuals."
+            "Tracking algorithms work on brightness, not color, so\n"
+            "grayscale loses nothing relevant and is the recommended\n"
+            "default. Choose Color only if the analysis needs hue —\n"
+            "for example distinguishing color-marked individuals."
         )
-        colour_row.addWidget(self._colour_combo)
-        colour_row.addWidget(self._colour_info_btn)
-        colour_row.addStretch()
-        layout.addLayout(colour_row, row, 1)
+        color_row.addWidget(self._color_combo)
+        color_row.addWidget(self._color_info_btn)
+        color_row.addStretch()
+        layout.addLayout(color_row, row, 1)
         row += 1
 
         # Show preview toggle
@@ -1164,7 +1173,7 @@ class MainWindow(QMainWindow):
         self._duration_spin.setEnabled(False)
         self._duration_spin.setFixedWidth(100)
         duration_unit_label = QLabel("seconds")
-        duration_unit_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        duration_unit_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         duration_row.addWidget(self._duration_spin)
         duration_row.addWidget(duration_unit_label)
         duration_row.addStretch()
@@ -1259,7 +1268,7 @@ class MainWindow(QMainWindow):
         name_header.setSpacing(4)
         name_header_label = QLabel("File name fields")
         name_header_label.setStyleSheet(
-            f"color: {COLOUR['text_dim']}; font-size: 11px; "
+            f"color: {COLOR['text_dim']}; font-size: 11px; "
             f"text-transform: uppercase; letter-spacing: 0.06em;"
         )
         self._field_order_info_btn = InfoButton(
@@ -1332,7 +1341,7 @@ class MainWindow(QMainWindow):
         self._px_per_cm_spin.setFixedWidth(100)
         self._px_per_cm_spin.valueChanged.connect(self._on_px_per_cm_changed)
         px_unit_label = QLabel("px/cm")
-        px_unit_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        px_unit_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         px_row.addWidget(self._px_per_cm_spin)
         px_row.addWidget(px_unit_label)
         px_row.addStretch()
@@ -1350,7 +1359,7 @@ class MainWindow(QMainWindow):
         self._frame_width_spin.setFixedWidth(100)
         self._frame_width_spin.valueChanged.connect(self._on_frame_width_changed)
         width_unit_label = QLabel("cm frame width")
-        width_unit_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        width_unit_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         width_row.addWidget(self._frame_width_spin)
         width_row.addWidget(width_unit_label)
         width_row.addStretch()
@@ -1359,7 +1368,7 @@ class MainWindow(QMainWindow):
 
         # Explanation of the computed relationship
         self._scale_hint_label = QLabel("")
-        self._scale_hint_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 11px;")
+        self._scale_hint_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 11px;")
         self._scale_hint_label.setWordWrap(True)
         layout.addWidget(self._scale_hint_label, row, 0, 1, 2)
 
@@ -1388,7 +1397,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(12)
 
         rec_label = QLabel("● RECORDING")
-        rec_label.setStyleSheet(f"color: {COLOUR['red']}; font-size: 18px; font-weight: bold;")
+        rec_label.setStyleSheet(f"color: {COLOR['red']}; font-size: 18px; font-weight: bold;")
         rec_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(rec_label)
 
@@ -1405,7 +1414,7 @@ class MainWindow(QMainWindow):
             dim = self._dim_label(stat_label)
             val = QLabel("—")
             val.setFont(mono_font)
-            val.setStyleSheet(f"color: {COLOUR['accent']};")
+            val.setStyleSheet(f"color: {COLOR['accent']};")
             setattr(self, attr_name, val)
             grid.addWidget(dim, row, 0)
             grid.addWidget(val, row, 1)
@@ -1415,11 +1424,11 @@ class MainWindow(QMainWindow):
         # Warnings area
         self._warning_label = QLabel("")
         self._warning_label.setWordWrap(True)
-        self._warning_label.setStyleSheet(f"color: {COLOUR['red']}; font-size: 12px;")
+        self._warning_label.setStyleSheet(f"color: {COLOR['red']}; font-size: 12px;")
         layout.addWidget(self._warning_label)
 
         stop_hint = QLabel("Press  q  or click Stop to end the recording")
-        stop_hint.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 11px;")
+        stop_hint.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 11px;")
         stop_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(stop_hint)
 
@@ -1431,7 +1440,7 @@ class MainWindow(QMainWindow):
     def _build_bottom_bar(self) -> QWidget:
         bar    = QWidget()
         bar.setFixedHeight(52)
-        bar.setStyleSheet(f"background-color: {COLOUR['panel']}; border-top: 1px solid {COLOUR['border']};")
+        bar.setStyleSheet(f"background-color: {COLOR['panel']}; border-top: 1px solid {COLOR['border']};")
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(12, 6, 12, 6)
 
@@ -1439,13 +1448,13 @@ class MainWindow(QMainWindow):
         self._record_button.setFixedHeight(38)
         self._record_button.setMinimumWidth(200)
         self._record_button.setStyleSheet(
-            f"background-color: {COLOUR['button_start']}; color: white; "
+            f"background-color: {COLOR['button_start']}; color: white; "
             f"font-size: 14px; font-weight: bold; border-radius: 4px; border: none;"
         )
         self._record_button.clicked.connect(self._on_record_toggle)
 
         self._bottom_status = QLabel("Ready")
-        self._bottom_status.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        self._bottom_status.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
 
         layout.addWidget(self._record_button)
         layout.addSpacing(16)
@@ -1559,24 +1568,24 @@ class MainWindow(QMainWindow):
             self._headroom_label.setText(
                 "Max fps not measured for these settings — Settings → Measure maximum fps"
             )
-            self._headroom_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+            self._headroom_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
             return
 
         capacity = capacity_for(measurement, write_speed, self._free_space_gb, selected_fps)
         fits     = _format_minutes(capacity["minutes"])
         if selected_fps > capacity["max_fps"] * 1.02:
-            colour = COLOUR["red"]
+            color = COLOR["red"]
             text = (f"✖ {selected_fps:.1f} fps is above the max of {capacity['max_fps']:.1f} "
                     f"(limited by {capacity['limit']}) — frames will be missed or dropped")
         else:
-            colour = COLOUR["green"]
+            color = COLOR["green"]
             text = (f"✔ Max {capacity['max_fps']:.1f} fps (limited by {capacity['limit']}) · "
                     f"{fits} fits on the card")
         self._headroom_label.setText(text)
-        self._headroom_label.setStyleSheet(f"color: {colour}; font-size: 12px;")
+        self._headroom_label.setStyleSheet(f"color: {color}; font-size: 12px;")
 
     def _measurements_for(self, mode, channels: int) -> dict:
-        """Stored measurements, by format key, at this resolution and colour mode."""
+        """Stored measurements, by format key, at this resolution and color mode."""
         store = self._app_config.get("throughput", {}) or {}
         found = {}
         for output_format in OUTPUT_FORMATS:
@@ -1740,15 +1749,15 @@ class MainWindow(QMainWindow):
             f"({fov_note}). Recalculated automatically when the sensor mode changes."
         )
 
-    def _on_colour_mode_changed(self, _index: int) -> None:
-        self._camera.set_colour_mode(self._current_channels())
+    def _on_color_mode_changed(self, _index: int) -> None:
+        self._camera.set_color_mode(self._current_channels())
         self._refresh_headroom()
 
     def _current_channels(self) -> int:
-        """Return 1 for greyscale, 3 for colour."""
-        label = self._colour_combo.currentText()
-        for colour_label, channels in COLOUR_MODES:
-            if colour_label == label:
+        """Return 1 for grayscale, 3 for color."""
+        label = self._color_combo.currentText()
+        for color_label, channels in COLOR_MODES:
+            if color_label == label:
                 return channels
         return 3
 
@@ -1929,7 +1938,7 @@ class MainWindow(QMainWindow):
         self._status_panel.setVisible(True)
         self._record_button.setText("■  Stop recording")
         self._record_button.setStyleSheet(
-            f"background-color: {COLOUR['button_stop']}; color: white; "
+            f"background-color: {COLOR['button_stop']}; color: white; "
             f"font-size: 14px; font-weight: bold; border-radius: 4px; border: none;"
         )
         self._bottom_status.setText(f"Recording to {target.name}")
@@ -1957,10 +1966,10 @@ class MainWindow(QMainWindow):
         self._record_button.setEnabled(False)
         self._record_button.setText("Finishing…")
         self._record_button.setStyleSheet(
-            f"background-color: {COLOUR['panel']}; color: {COLOUR['text_dim']}; "
+            f"background-color: {COLOR['panel']}; color: {COLOR['text_dim']}; "
             f"font-size: 14px; font-weight: bold; border-radius: 4px; border: none;"
         )
-        self._warning_label.setStyleSheet(f"color: {COLOUR['amber']}; font-size: 12px;")
+        self._warning_label.setStyleSheet(f"color: {COLOR['amber']}; font-size: 12px;")
         self._warning_label.setText("Writing buffered frames — do not close the app.")
         # Poll faster while draining so the countdown looks responsive
         self._status_timer.start(100)
@@ -2002,7 +2011,7 @@ class MainWindow(QMainWindow):
         self._session = None
         self._reset_ui_after_recording()
 
-        # ── Summarise ──────────────────────────────────────────────────────────
+        # ── Summarize ──────────────────────────────────────────────────────────
         frames_written = capture_summary.get("frames_written", 0)
         frames_dropped = capture_summary.get("frames_dropped", 0)
         frames_missed  = capture_summary.get("frames_missed", 0)
@@ -2080,7 +2089,7 @@ class MainWindow(QMainWindow):
         self._record_button.setEnabled(True)
         self._record_button.setText("▶  Start recording")
         self._record_button.setStyleSheet(
-            f"background-color: {COLOUR['button_start']}; color: white; "
+            f"background-color: {COLOR['button_start']}; color: white; "
             f"font-size: 14px; font-weight: bold; border-radius: 4px; border: none;"
         )
 
@@ -2103,7 +2112,7 @@ class MainWindow(QMainWindow):
                 )
                 self._frames_label.setText(f"{self._session.stats.frames_written:7d}")
                 self._headroom_live_label.setText(f"{remaining:5d} queued")
-                self._headroom_live_label.setStyleSheet(f"color: {COLOUR['amber']};")
+                self._headroom_live_label.setStyleSheet(f"color: {COLOR['amber']};")
             return
 
         stats = self._session.stats
@@ -2122,21 +2131,21 @@ class MainWindow(QMainWindow):
                 f"{stats.elapsed_s:7.1f} s   @ {live_fps:.1f} fps"
             )
             if requested_fps > 0 and live_fps < requested_fps * 0.9:
-                self._elapsed_label.setStyleSheet(f"color: {COLOUR['red']};")
+                self._elapsed_label.setStyleSheet(f"color: {COLOR['red']};")
             else:
-                self._elapsed_label.setStyleSheet(f"color: {COLOUR['accent']};")
+                self._elapsed_label.setStyleSheet(f"color: {COLOR['accent']};")
 
         # Queue depth is the live indicator of whether the disk is keeping up
         queue_pct = min(100, int(100 * stats.queue_depth
                                  / max(1, self._session.queue_capacity)))
         self._headroom_live_label.setText(f"queue {queue_pct:3d}% full")
         if queue_pct > 80:
-            queue_colour = COLOUR["red"]
+            queue_color = COLOR["red"]
         elif queue_pct > 50:
-            queue_colour = COLOUR["amber"]
+            queue_color = COLOR["amber"]
         else:
-            queue_colour = COLOUR["green"]
-        self._headroom_live_label.setStyleSheet(f"color: {queue_colour};")
+            queue_color = COLOR["green"]
+        self._headroom_live_label.setStyleSheet(f"color: {queue_color};")
 
         # ── Warnings with concrete suggestions ─────────────────────────────────
         self._update_drop_warning(stats)
@@ -2162,7 +2171,7 @@ class MainWindow(QMainWindow):
         if stats.frames_missed > 0 and stats.miss_rate_pct >= 5.0:
             live_fps = (stats.frames_captured / stats.elapsed_s
                         if stats.elapsed_s > 0 else 0)
-            self._warning_label.setStyleSheet(f"color: {COLOUR['red']}; font-size: 12px;")
+            self._warning_label.setStyleSheet(f"color: {COLOR['red']}; font-size: 12px;")
             self._warning_label.setText(
                 f"✖ Capturing at {live_fps:.1f} fps, not the requested "
                 f"{requested_fps:.1f} ({stats.miss_rate_pct:.0f}% of frames missed).\n\n"
@@ -2180,7 +2189,7 @@ class MainWindow(QMainWindow):
 
         drop_rate = stats.drop_rate_pct
         if drop_rate < 1.0:
-            self._warning_label.setStyleSheet(f"color: {COLOUR['amber']}; font-size: 12px;")
+            self._warning_label.setStyleSheet(f"color: {COLOR['amber']}; font-size: 12px;")
             self._warning_label.setText(
                 f"⚠ {stats.frames_dropped} frames dropped ({drop_rate:.1f}%). "
                 f"Occasional drops at this rate are usually tolerable for tracking."
@@ -2189,14 +2198,14 @@ class MainWindow(QMainWindow):
 
         suggestions = []
         if self._current_channels() == 3:
-            suggestions.append("switch to Greyscale (~3× less data)")
+            suggestions.append("switch to Grayscale (~3× less data)")
         if self._fps_spin.value() > 5:
             suggestions.append("lower the framerate")
         if self._current_format() is not formats.H264:
             suggestions.append("use H.264 (much smaller, though less ideal for tracking)")
         suggestions.append("choose a lower resolution")
 
-        self._warning_label.setStyleSheet(f"color: {COLOUR['red']}; font-size: 12px;")
+        self._warning_label.setStyleSheet(f"color: {COLOR['red']}; font-size: 12px;")
         self._warning_label.setText(
             f"✖ {stats.frames_dropped} frames dropped ({drop_rate:.1f}%) — "
             f"the SD card cannot keep up.\n\n"
@@ -2275,7 +2284,7 @@ class MainWindow(QMainWindow):
 
     def _on_measure_max_fps(self) -> None:
         """
-        Measure every format at the current resolution and colour mode, then
+        Measure every format at the current resolution and color mode, then
         show the capacity table.
 
         Each format is recorded flat out for a few seconds using the real
@@ -2296,12 +2305,12 @@ class MainWindow(QMainWindow):
             return
 
         mode        = self._current_sensor_mode()
-        colour_name = "greyscale" if settings.channels == 1 else "colour"
+        color_name = "grayscale" if settings.channels == 1 else "color"
         needs_card  = not self._app_config["hardware"].get("sd_write_speed_mbs")
         proceed = QMessageBox.question(
             self, "Measure maximum fps",
             f"This records each format flat out for about 5 seconds at\n\n"
-            f"    {mode.width} × {mode.height}, {colour_name}\n\n"
+            f"    {mode.width} × {mode.height}, {color_name}\n\n"
             f"to find the highest frame rate each can sustain"
             + (", after measuring\nthe SD card's write speed (another ~15 s)" if needs_card else "")
             + ".\n\nTest footage goes to a hidden folder in your save directory\n"
@@ -2369,15 +2378,19 @@ class MainWindow(QMainWindow):
         report = QMessageBox(self)
         report.setWindowTitle("Measurement complete" if not failures else "Measurement finished with errors")
         report.setTextFormat(Qt.TextFormat.RichText)
-        failure_text = "".join(
-            f"<p><b>{html.escape(label)}</b> could not be measured: "
-            f"{html.escape(error)}</p>" for label, error in failures.items()
+        # Failures are wrapped to the table's width and shown in the same
+        # monospaced block, so the window stays about as wide as the table
+        failure_text = "\n\n".join(
+            textwrap.fill(f"{label} could not be measured: {' '.join(error.split())}",
+                          CAPACITY_TABLE_WIDTH)
+            for label, error in failures.items()
         )
-        report.setText(f"<pre>{html.escape(table)}</pre>{failure_text}")
+        report_text = table + ("\n\n" + failure_text if failure_text else "")
+        report.setText(f"<pre>{html.escape(report_text)}</pre>")
         report.exec()
         self._bottom_status.setText(
             f"Measured {len(results)} of {steps} formats at "
-            f"{mode.width}×{mode.height}, {colour_name}"
+            f"{mode.width}×{mode.height}, {color_name}"
         )
 
     def _on_recalibrate_write_speed(self) -> None:
@@ -2457,7 +2470,7 @@ class MainWindow(QMainWindow):
             "camera": {
                 "sensor_mode": "{0.width}x{0.height}".format(self._current_sensor_mode()),
                 "fps":         self._fps_spin.value(),
-                "colour_mode": self._colour_combo.currentText(),
+                "color_mode": self._color_combo.currentText(),
             },
             "metadata": {
                 **self._field_list.get_field_values(),
@@ -2526,10 +2539,13 @@ class MainWindow(QMainWindow):
         # fps must be applied after sensor_mode, since the mode sets the ceiling
         if "fps" in cam and cam["fps"] is not None:
             self._fps_spin.setValue(float(cam["fps"]))
-        if "colour_mode" in cam and cam["colour_mode"]:
-            colour_index = self._colour_combo.findText(cam["colour_mode"])
-            if colour_index >= 0:
-                self._colour_combo.setCurrentIndex(colour_index)
+        # Pre-1.0 profiles use the key "colour_mode" and British values
+        color_mode = cam.get("color_mode") or cam.get("colour_mode")
+        if color_mode:
+            color_mode = LEGACY_COLOR_MODES.get(color_mode, color_mode)
+            color_index = self._color_combo.findText(color_mode)
+            if color_index >= 0:
+                self._color_combo.setCurrentIndex(color_index)
 
     # =========================================================================
     # Helpers
@@ -2587,7 +2603,7 @@ class MainWindow(QMainWindow):
 
     def _dim_label(self, text: str) -> QLabel:
         label = QLabel(text)
-        label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+        label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
         label.setMinimumWidth(100)
         label.setMaximumWidth(100)
         return label

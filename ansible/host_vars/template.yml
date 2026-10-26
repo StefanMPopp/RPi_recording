@@ -17,7 +17,7 @@
 unit_id: "piN"                 # must match the inventory name
 
 # ── Arena ─────────────────────────────────────────────────────────────────────
-# Physical dimensions of the recording arena for this rig, in centimetres.
+# Physical dimensions of the recording arena for this rig, in centimeters.
 # Used as a starting point for spatial calibration; the experimenter still
 # confirms the scale in the app, since the exact framing can shift.
 arena_width_cm:  30

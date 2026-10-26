@@ -33,7 +33,7 @@ MJPEG = OutputFormat(
     extension      = ".avi",
     is_image_stack = False,
     description    = "Recommended for tracking. Each frame is compressed independently — "
-                     "no inter-frame artefacts. Larger files than H.264 but safe for "
+                     "no inter-frame artifacts. Larger files than H.264 but safe for "
                      "centroid-based tracking algorithms.",
 )
 
@@ -62,7 +62,7 @@ H264 = OutputFormat(
     extension      = ".mp4",
     is_image_stack = False,
     description    = "⚠ Use with caution for tracking. Inter-frame compression can smear "
-                     "fast-moving animals and introduce block artefacts. Smallest file size.",
+                     "fast-moving animals and introduce block artifacts. Smallest file size.",
 )
 
 OUTPUT_FORMATS: list[OutputFormat] = [MJPEG, TIFF, PNG, H264]

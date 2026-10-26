@@ -135,7 +135,7 @@ whose SD slot tops out around 40–50 MB/s). 85% of that speed is counted as
 usable. Keeping the card separate also means recalibrating it, or the card
 filling up, updates the table without re-measuring.
 
-Measurements are cached in `config_app.yaml` per resolution, colour mode and
+Measurements are cached in `config_app.yaml` per resolution, color mode and
 encoder setting, so changing `PNG_MODE` or `TIFF_COMPRESSION` marks a format as
 unmeasured rather than reusing figures from a different encoder.
 

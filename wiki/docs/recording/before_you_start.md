@@ -40,14 +40,14 @@ LED panels you rarely need it wide open.
 
 ## 3. Scale
 
-The scale converts pixels to centimetres for the analysis. **Set it now** — it
+The scale converts pixels to centimeters for the analysis. **Set it now** — it
 is easy to forget and impossible to recover later without re-measuring the rig.
 
 In the **Metadata** section, choose which value you want to type:
 
 === "Frame width (usually easier)"
     Lay a ruler across the full width of the frame and read off how many
-    centimetres are visible edge to edge. Select **frame width** and type it.
+    centimeters are visible edge to edge. Select **frame width** and type it.
     The app computes px/cm.
 
 === "px/cm"

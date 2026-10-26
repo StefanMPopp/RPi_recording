@@ -1,6 +1,6 @@
 # Camera notes
 
-IMX477 and picamera2 behaviours that cost time to discover. Recorded here so
+IMX477 and picamera2 behaviors that cost time to discover. Recorded here so
 they cost it only once.
 
 ---
@@ -52,7 +52,7 @@ on a mode change. That is wrong:
 
 The app therefore stores **the scene width the full sensor would see**, and
 derives px/cm and frame width from it for whichever mode is active. Modes with
-reduced field of view are labelled `[NN% FoV]` in the dropdown, and
+reduced field of view are labeled `[NN% FoV]` in the dropdown, and
 `fov_fraction_width` is written into every metadata file.
 
 !!! warning "Practical consequence"
@@ -98,13 +98,13 @@ picamera2 refuses `RGB888` on the `lores` stream:
 RuntimeError: lores stream must be YUV
 ```
 
-The preview therefore requests `YUV420` and converts. For greyscale it takes the
-Y plane directly — cheaper, and it avoids colour-conversion bugs entirely.
+The preview therefore requests `YUV420` and converts. For grayscale it takes the
+Y plane directly — cheaper, and it avoids color-conversion bugs entirely.
 
 ### YUV plane order
 
 OpenCV's `COLOR_YUV2RGB_I420` matches picamera2's layout. `YV12` swaps U and V.
-If colours ever come back with red and blue exchanged, that is the constant to
+If colors ever come back with red and blue exchanged, that is the constant to
 check.
 
 ### Changing sensor mode requires a restart

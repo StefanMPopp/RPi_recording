@@ -97,8 +97,8 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
         if not reader.fieldnames:
             raise ValueError("The file has no header row.")
 
-        # Map normalised -> original column names so lookups are forgiving
-        def normalise(name: str) -> str:
+        # Map normalized -> original column names so lookups are forgiving
+        def normalize(name: str) -> str:
             key = (name or "").strip().lower()
             return COLUMN_ALIASES.get(key, key)
 
@@ -107,7 +107,7 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
         # wins over an alias.
         column_map: dict[str, str] = {}
         for name in reader.fieldnames:
-            key = normalise(name)
+            key = normalize(name)
             if not key:
                 continue
             if key in column_map:
@@ -122,8 +122,8 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
                 continue
             column_map[key] = name
         treatment_columns = [
-            original for normalised, original in column_map.items()
-            if normalised not in RESERVED_COLUMNS and normalised
+            original for normalized, original in column_map.items()
+            if normalized not in RESERVED_COLUMNS and normalized
         ]
 
         if not treatment_columns:
@@ -137,8 +137,8 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
             if not any((value or "").strip() for value in raw_row.values()):
                 continue
 
-            def cell(normalised_name: str) -> str:
-                original = column_map.get(normalised_name)
+            def cell(normalized_name: str) -> str:
+                original = column_map.get(normalized_name)
                 if original is None:
                     return "NA"
                 return (raw_row.get(original) or "").strip() or "NA"

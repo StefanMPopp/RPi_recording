@@ -38,7 +38,7 @@ deadline.
 
 All four formats go through the same software capture loop rather than using
 picamera2's hardware H.264 encoder. The hardware path is faster but gives no
-per-frame visibility, cannot produce true greyscale, and would make dropped-frame
+per-frame visibility, cannot produce true grayscale, and would make dropped-frame
 counting a guess. Honest drop reporting was judged more valuable than the speed.
 
 If H.264 at high resolution proves too slow, a hardware fast-path can be added —
@@ -69,7 +69,7 @@ well-meaning person fixing something in the field.
 ## Current state
 
 **Working:** the recorder app — preview with zoom and pan, all four formats,
-greyscale and colour, metadata sidecars, profiles, metadata lists with
+grayscale and color, metadata sidecars, profiles, metadata lists with
 automatic advance, measured per-format maximum frame rates.
 
 **Not yet built:**

@@ -8,7 +8,7 @@ All tuneable values live here or in config_app.yaml — never hardcoded elsewher
 from pathlib import Path
 
 APP_NAME    = "RPi Recorder"
-APP_VERSION = "0.1.0"
+APP_VERSION = "1.0.0"
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 # Derived from the running user's home directory rather than hardcoded, because
@@ -36,14 +36,14 @@ BENCHMARK_SAFETY_MARGIN = 0.85      # fraction of write speed treated as usable 
 # depths cost framerate and storage. Set to None to expose all bit depths.
 ALLOWED_BIT_DEPTHS    = [8]
 
-# ── Colour modes ───────────────────────────────────────────────────────────────
-# Greyscale takes only the Y (luma) plane of the YUV stream: 1 byte per pixel
+# ── Color modes ───────────────────────────────────────────────────────────────
+# Grayscale takes only the Y (luma) plane of the YUV stream: 1 byte per pixel
 # instead of 3, with no loss of information relevant to tracking.
-COLOUR_MODES = [
-    ("Greyscale", 1),   # (display_label, channels)
-    ("Colour",    3),
+COLOR_MODES = [
+    ("Grayscale", 1),   # (display_label, channels)
+    ("Color",    3),
 ]
-DEFAULT_COLOUR_MODE   = "Greyscale"
+DEFAULT_COLOR_MODE   = "Grayscale"
 
 # ── Hardware H.264 ────────────────────────────────────────────────────────────
 # The Pi 4 has a dedicated H.264 encoder, used automatically when it passes a
@@ -58,18 +58,18 @@ DEFAULT_COLOUR_MODE   = "Greyscale"
 ENABLE_HARDWARE_H264 = True
 
 # ── Image stack encoding ──────────────────────────────────────────────────────
-# Defaults favour FRAME RATE over file size: both stack formats are written
+# Defaults favor FRAME RATE over file size: both stack formats are written
 # uncompressed. If the measurement table reports the SD card as the limit for
 # a format, switching it to a compressed option below may raise its rate.
 #
 # Lossless stacks trade CPU time against bytes written, and which side limits
-# a recording depends on the machine. At 4K greyscale a frame is 12.3 MB raw,
+# a recording depends on the machine. At 4K grayscale a frame is 12.3 MB raw,
 # so a card sustaining ~90 MB/s caps UNCOMPRESSED stacks near 7 fps no matter
 # how fast encoding is, while compressing costs CPU the Pi has little of.
 # Neither choice wins everywhere, so both are exposed. Measure with
 # Settings -> Measure maximum fps after changing either.
 #
-# Figures below: 4056x3040 greyscale, desktop CPU, so ratios matter, not the
+# Figures below: 4056x3040 grayscale, desktop CPU, so ratios matter, not the
 # absolute times. Real footage with less sensor noise compresses better.
 #
 #   PNG default (OpenCV, no flags)   ~135 ms   8.2 MB   <- PNG_MODE = "default"
@@ -79,7 +79,7 @@ ENABLE_HARDWARE_H264 = True
 #   TIFF uncompressed                 ~20 ms  12.3 MB   <- "none"
 
 # "default": OpenCV's own PNG settings, which are tuned for speed (fast filter,
-#            fast strategy). Compressed, about 8 MB per 4K greyscale frame.
+#            fast strategy). Compressed, about 8 MB per 4K grayscale frame.
 # "store":   no compression and no filtering. Still a valid lossless PNG that
 #            every tool opens, ~4x faster to write, ~50% larger. Needs a recent
 #            OpenCV (exposes IMWRITE_PNG_FILTER); older builds fall back to

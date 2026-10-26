@@ -32,7 +32,7 @@ def build_metadata(settings, capture_summary: dict) -> dict:
 
     Sections:
       experiment  — who/what/which treatment/which trial
-      camera      — resolution, framerate, colour mode
+      camera      — resolution, framerate, color mode
       scale       — px per cm, however it was specified
       output      — format and file layout
       capture     — what actually happened (times, frame counts, drops)
@@ -53,7 +53,7 @@ def build_metadata(settings, capture_summary: dict) -> dict:
             "frame_width_px":  settings.frame_width,
             "frame_height_px": settings.frame_height,
             "requested_fps":   settings.fps,
-            "colour_mode":     "greyscale" if settings.channels == 1 else "colour",
+            "color_mode":     "grayscale" if settings.channels == 1 else "color",
             "channels":        settings.channels,
             # Fraction of the sensor's full width this mode reads. Modes with
             # the same pixel count can have different fields of view, so this

@@ -12,7 +12,7 @@ When a recording starts, the controls are replaced by a live status panel.
 
 | Action | Result |
 |---|---|
-| ++ctrl++ + scroll | Zoom in and out, centred on the cursor |
+| ++ctrl++ + scroll | Zoom in and out, centerd on the cursor |
 | scroll | Pan up and down (when zoomed in) |
 | ++shift++ + scroll | Pan left and right (when zoomed in) |
 | double-click | Reset to the full frame |
@@ -35,9 +35,9 @@ area**, not just a smaller image. See
 
 **Framerate** — any value up to the mode's maximum, shown as `max NN.N` beside
 the field. Lower framerates are the simplest way to reduce data rate without
-losing resolution, and are ideal for slow behaviours or long recordings.
+losing resolution, and are ideal for slow behaviors or long recordings.
 
-**Colour** — Greyscale (default) or Colour. Greyscale records only the
+**Color** — Grayscale (default) or Color. Grayscale records only the
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.
 
@@ -51,13 +51,13 @@ some CPU; disabling it frees that for encoding.
 **Save to** — the output folder. The folder icon opens a browser.
 
 **Format** — the file format. Hover the blue ⓘ for the measured capacity table:
-for every format at the current resolution and colour mode, the maximum frame
+for every format at the current resolution and color mode, the maximum frame
 rate, what limits it (camera, encoding or SD card), megabytes per frame, and how
 long a recording fits on the card. Empty until you run
 **Settings → Measure maximum fps**. See
 [maximum frame rate](choosing_settings.md#maximum-frame-rate).
 
-The line below the selector summarises the chosen format — its maximum and how
+The line below the selector summarizes the chosen format — its maximum and how
 long fits on the card — and turns red if the selected frame rate is above that
 maximum.
 
@@ -149,7 +149,7 @@ Press ++q++ or click **Stop recording** to finish.
 
 **Settings → Measure maximum fps for current settings** — records each format
 flat out for a few seconds (about 25 s in total) and fills the capacity table
-for the current resolution and colour mode. Test footage goes to a hidden folder
+for the current resolution and color mode. Test footage goes to a hidden folder
 in the save directory and is deleted.
 
 **Settings → Recalibrate write speed** — measures the SD card's sustained write

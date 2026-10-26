@@ -60,7 +60,7 @@ class RecordingSettings:
     frame_width:    int
     frame_height:   int
     fps:            float
-    channels:       int              # 1 = greyscale, 3 = colour
+    channels:       int              # 1 = grayscale, 3 = color
     duration_s:     float | None     # None = record until stopped
     fov_fraction:   float = 1.0      # fraction of full sensor width this mode sees
     metadata:       dict = field(default_factory=dict)
@@ -152,7 +152,7 @@ class VideoWriter:
 
         fourcc_code = self._FOURCC_BY_FORMAT.get(settings.output_format.key, "MJPG")
         fourcc      = cv2.VideoWriter_fourcc(*fourcc_code)
-        is_colour   = settings.channels == 3
+        is_color   = settings.channels == 3
 
         settings.output_dir.mkdir(parents=True, exist_ok=True)
         self._writer = cv2.VideoWriter(
@@ -160,14 +160,14 @@ class VideoWriter:
             fourcc,
             settings.fps,
             (settings.frame_width, settings.frame_height),
-            is_colour,
+            is_color,
         )
         if not self._writer.isOpened():
             raise RuntimeError(
                 f"Could not open video writer for {settings.video_file}. "
                 f"Check that the codec '{fourcc_code}' is available."
             )
-        self._is_colour     = is_colour
+        self._is_color     = is_color
         self._expected_size = (settings.frame_width, settings.frame_height)
 
     def write(self, frame: np.ndarray, frame_index: int) -> None:
@@ -186,14 +186,14 @@ class VideoWriter:
                     f"video file."
                 )
             actual_channels = 1 if frame.ndim == 2 else frame.shape[2]
-            expected_channels = 3 if self._is_colour else 1
+            expected_channels = 3 if self._is_color else 1
             if actual_channels != expected_channels:
                 raise ValueError(
                     f"Frame has {actual_channels} channel(s) but the video was "
                     f"opened for {expected_channels}."
                 )
 
-        # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects
+        # Color frames are already BGR (picamera2's RGB888), as OpenCV expects
         self._writer.write(frame)
 
     def close(self) -> None:
@@ -271,7 +271,7 @@ def hardware_h264_available(width: int, height: int, channels: int = 1) -> bool:
 
     Testing anything less has failed twice. A probe using ffmpeg's synthetic
     `lavfi` source feeds the encoder yuv420p directly, skipping the pixel
-    format conversion a real greyscale recording needs, and passed on a
+    format conversion a real grayscale recording needs, and passed on a
     configuration that then died mid-recording with "VIDIOC_STREAMON failed".
     An earlier probe at a small fixed size passed on hardware that could not
     handle the actual resolution. Only an end-to-end probe predicts the
@@ -377,7 +377,7 @@ _HARDWARE_H264_ARGUMENTS = [
     "-c:v", "h264_v4l2m2m",
     # Convert to yuv420p explicitly rather than leaving ffmpeg to negotiate it.
     # The V4L2 encoder is particular about its input format, and an implicit
-    # conversion is what produced "VIDIOC_STREAMON failed" on greyscale input.
+    # conversion is what produced "VIDIOC_STREAMON failed" on grayscale input.
     "-vf", "format=yuv420p",
     # Hardware encoders take a bitrate rather than a quality scale. Generous,
     # since the point here is speed, not small files.
@@ -558,13 +558,13 @@ class FFmpegVideoWriter:
             raise RuntimeError("ffmpeg exited during recording:\n" + message)
 
     def close(self) -> None:
-        """Close the pipe and wait for ffmpeg to finalise the container."""
+        """Close the pipe and wait for ffmpeg to finalize the container."""
         if self._process.stdin:
             try:
                 self._process.stdin.close()
             except OSError:
                 pass
-        # Finalising can take a moment on a long recording; the container's
+        # Finalizing can take a moment on a long recording; the container's
         # index is written here, so cutting it short corrupts the file.
         try:
             self._process.wait(timeout=120)
@@ -681,7 +681,7 @@ class ParallelImageStackWriter:
 
     def _write_one(self, frame: np.ndarray, image_file) -> None:
         try:
-            # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects.
+            # Color frames are already BGR (picamera2's RGB888), as OpenCV expects.
             # imwrite returns False rather than raising on most failures —
             # an unwritable path, an unsupported extension, a full disk — so
             # the result must be checked or frames vanish silently.
@@ -713,7 +713,7 @@ class ParallelImageStackWriter:
 #   encoding — compressing each frame (CPU, or the hardware H.264 block)
 #   SD card  — writing the encoded bytes
 #
-# Which one binds depends on resolution, colour mode AND format, so each
+# Which one binds depends on resolution, color mode AND format, so each
 # format is measured separately. The first two are measured by running the
 # real recording machinery — capture thread, queue, writer thread — flat out,
 # because they overlap in a real recording: timing them back to back in one
@@ -908,8 +908,8 @@ def throughput_cache_key(width: int, height: int, channels: int,
     Framerate is deliberately absent: the measurement finds the CEILING, which
     does not depend on the rate selected.
     """
-    colour = "grey" if channels == 1 else "colour"
-    return f"{width}x{height}_{colour}_{encoder_signature(output_format)}"
+    color = "gray" if channels == 1 else "color"
+    return f"{width}x{height}_{color}_{encoder_signature(output_format)}"
 
 
 def remove_previous_stack_frames(settings: RecordingSettings) -> int:
@@ -1026,10 +1026,10 @@ class RecordingSession:
 
     def start(self) -> None:
         """Open the writer, reconfigure the camera, and launch both threads."""
-        # Reconfigure the main stream to match the recording's colour mode
-        # BEFORE capture starts. For a greyscale recording this means the
-        # camera skips full-colour ISP processing entirely rather than
-        # capturing colour and discarding it afterward — see
+        # Reconfigure the main stream to match the recording's color mode
+        # BEFORE capture starts. For a grayscale recording this means the
+        # camera skips full-color ISP processing entirely rather than
+        # capturing color and discarding it afterward — see
         # PiCamera.prepare_for_recording for why this matters.
         self._camera.prepare_for_recording(self._settings.channels)
 
