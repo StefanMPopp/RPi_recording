@@ -3,31 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 
-# App-generated config (machine-specific)
+# App-generated config (machine-specific), its update backup and any
+# unreadable copy the app set aside
 config_app.yaml
-
-# Ansible per-host configs (hardware-specific, never committed)
-ansible/host_vars/*.yml
-!ansible/host_vars/template.yml
-
-# Recordings
-*.avi
-*.mp4
-*.tiff
-*.png
-
-# MkDocs build output
-site/
-# ── Add these lines to .gitignore in the repo root ────────────────────────────
-
-# Per-rig Ansible config — hardware-specific, exists only on the dev Pi.
-# Back these up separately; they are not recoverable from GitHub.
-ansible/host_vars/*.yml
-!ansible/host_vars/template.yml
-
-# Ansible runtime files
-ansible/*.retry
-# ── Add these lines to .gitignore in the repo root ────────────────────────────
+config_app.yaml.*
 
 # Per-rig Ansible config — hardware-specific, exists only on the dev Pi.
 # Back these up separately; they are not recoverable from GitHub.
@@ -41,3 +20,15 @@ ansible/*.retry
 # exists only on the dev Pi, never committed. See wiki → Set up the dev Pi.
 ansible/files/github_deploy_ro
 ansible/files/github_deploy_ro.pub
+
+# Recordings
+*.avi
+*.mp4
+*.tiff
+*.png
+
+# Archives (patches and bundles are applied, not kept in the repo)
+*.zip
+
+# MkDocs build output — the published wiki lives on the gh-pages branch
+site/

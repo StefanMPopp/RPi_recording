@@ -990,7 +990,7 @@ class RecordingSession:
     Runs one recording from start to finish.
 
     Usage:
-        session = RecordingSession(camera, settings, queue_size=60)
+        session = RecordingSession(camera, settings)
         session.start()
         ...  # poll session.stats for live UI updates
         summary = session.stop()

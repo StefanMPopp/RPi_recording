@@ -1135,13 +1135,14 @@ class MainWindow(QMainWindow):
         self._auto_name_check.stateChanged.connect(self._on_auto_name_toggled)
         self._auto_name_info_btn = InfoButton(
             "When ticked, the file name is built automatically from the\n"
-            "metadata fields:\n\n"
-            "    {experiment}_{treatments}_{trial}\n\n"
+            "file name fields under Metadata, in their order there\n"
+            "(by default experiment, ant ID, trial, then treatments):\n\n"
+            "    {experiment}_{ant_id}_{trial}_{treatments}\n\n"
             "Treatments are joined with '-'. Whether treatment NAMES are\n"
             "included alongside their values is set under\n"
-            "Settings → File naming.\n\n"
-            "    values only:  foraging_high-dim_3\n"
-            "    with names:   foraging_density-high-light-dim_3\n\n"
+            "Settings → Include treatment names in file name.\n\n"
+            "    values only:  foraging_A01_3_high-dim\n"
+            "    with names:   foraging_A01_3_density-high-light-dim\n\n"
             "Untick to type a name yourself. Parts that are empty or 'NA'\n"
             "are left out rather than appearing literally."
         )
@@ -2607,11 +2608,6 @@ class MainWindow(QMainWindow):
         label.setMinimumWidth(100)
         label.setMaximumWidth(100)
         return label
-
-    # =========================================================================
-    # Automatic file naming from metadata
-    # =========================================================================
-
 
     # =========================================================================
     # Automatic file naming from metadata

@@ -61,6 +61,20 @@
     # Pull
     # ─────────────────────────────────────────────────────────────────────────
 
+    # config_app.yaml holds this rig's own calibration (SD speed, measured
+    # fps). It is not tracked by git, but older commits tracked it, so the
+    # pull that moves a rig past them deletes it. Keep a copy across the pull
+    # and put it back if it went missing.
+    - name: Back up this rig's app config
+      ansible.builtin.copy:
+        src: "{{ repo_dir }}/config_app.yaml"
+        dest: "{{ repo_dir }}/config_app.yaml.before_update"
+        remote_src: true
+        mode: preserve
+      register: config_backup
+      failed_when: false
+      tags: [repo]
+
     - name: Pull the latest code
       ansible.builtin.git:
         repo: "{{ repo_url }}"
@@ -73,6 +87,14 @@
         # to that Pi indefinitely and silently.
         force: true
       register: git_result
+      tags: [repo]
+
+    - name: Restore this rig's app config if the pull removed it
+      ansible.builtin.command:
+        cmd: cp -p config_app.yaml.before_update config_app.yaml
+        chdir: "{{ repo_dir }}"
+        creates: "{{ repo_dir }}/config_app.yaml"
+        removes: "{{ repo_dir }}/config_app.yaml.before_update"
       tags: [repo]
 
     # ─────────────────────────────────────────────────────────────────────────
