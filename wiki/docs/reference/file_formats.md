@@ -33,8 +33,8 @@ H.264.
 | Format | Compression | Independent frames | Tracking |
 |---|---|---|---|
 | **MJPEG (.avi)** | Lossy, per frame | ✓ | Recommended |
-| **TIFF stack** | None | ✓ | Ideal, large |
-| **PNG stack** | Lossless, per frame | ✓ | Ideal, slow to write |
+| **TIFF stack** | None by default, or LZW / deflate | ✓ | Ideal, large |
+| **PNG stack** | None by default, or lossless compressed | ✓ | Ideal, large |
 | **H.264 (.mp4)** | Lossy, inter-frame | ✗ | Use with care |
 
 ---
@@ -47,8 +47,8 @@ Approximate, static scene, **greyscale**. Colour is roughly 2.5–3× more.
 
 | Format | 15 fps | 30 fps | 60 fps |
 |---|---|---|---|
-| TIFF stack | 2.6 GB/min | 5.2 GB/min | 10.4 GB/min |
-| PNG stack | 260 MB/min | 520 MB/min | — |
+| TIFF stack (uncompressed) | 2.8 GB/min | 5.5 GB/min | 11.1 GB/min |
+| PNG stack | 1.9 GB/min | 3.7 GB/min | — |
 | MJPEG | 340 MB/min | 680 MB/min | 1.4 GB/min |
 | H.264 | 25 MB/min | 50 MB/min | 100 MB/min |
 
@@ -56,12 +56,19 @@ Approximate, static scene, **greyscale**. Colour is roughly 2.5–3× more.
 
 | Format | 5 fps | 10 fps | 17 fps |
 |---|---|---|---|
-| TIFF stack | 3.5 GB/min | 7 GB/min | 11.9 GB/min |
-| PNG stack | 350 MB/min | 700 MB/min | — |
+| TIFF stack (uncompressed) | 3.7 GB/min | 7.4 GB/min | 12.6 GB/min |
+| PNG stack | 2.5 GB/min | 4.9 GB/min | — |
 | MJPEG | 450 MB/min | 900 MB/min | 1.5 GB/min |
 | H.264 | 35 MB/min | 70 MB/min | 120 MB/min |
 
 Dashes mark combinations where encoding cannot keep up regardless of card speed.
+
+!!! note "How firm these numbers are"
+    The **TIFF** rows are exact for uncompressed files (width × height × fps).
+    The **PNG** rows assume about two-thirds of the raw size, which was
+    measured on noisy test frames — cleaner footage compresses better, so
+    treat them as an upper bound. The **MJPEG** and **H.264** rows are
+    estimates that have not been checked against real recordings.
 
 !!! tip "Use the app's estimates, not this table"
     The ⓘ next to **Format** shows these numbers for your actual settings,
@@ -74,7 +81,7 @@ Dashes mark combinations where encoding cannot keep up regardless of card speed.
 
 ```
 Does the analysis need colour?
-├─ yes → Colour, and check headroom carefully
+├─ yes → Colour, and measure the maximum fps first
 └─ no  → Greyscale (default)
 
 How long is a recording?
@@ -98,20 +105,43 @@ Every tracking library reads it.
 
 ### TIFF stack
 
-Uncompressed, exactly what the sensor produced. Enormous — at high framerates
-it exceeds any SD card's write speed. Genuinely useful at low framerates where
-fidelity matters more than volume.
+Lossless. The app writes TIFFs **uncompressed** by default
+(`TIFF_COMPRESSION = "none"` in `constants.py`), because the priority is frame
+rate. OpenCV's own default would be LZW — about 15% smaller on typical footage
+but roughly ten times slower to write (measured ~207 ms against ~20 ms per 4K
+greyscale frame). `"lzw"` and `"deflate"` are available when file size matters
+more.
+
+Which setting records faster depends on what limits the rig. At 4K greyscale a
+frame is 12.3 MB, so a card sustaining 90 MB/s caps uncompressed stacks near
+7 fps however fast the encoder is — while compressing spends CPU the Pi has
+little of. Use **Settings → Measure maximum fps** after changing it.
 
 ### PNG stack
 
-Lossless compression, roughly ten times smaller than TIFF. The catch is CPU:
-PNG encoding is slow, and above roughly 15 fps the Pi cannot keep up regardless
-of card speed. Ideal for timelapse.
+Lossless, typically around two-thirds of the raw size (it varies with image
+content). OpenCV's default PNG settings are already tuned for speed, so leave
+`PNG_COMPRESSION_LEVEL` unset: setting a level on its own measured about 2.5×
+*slower*, because it discards the fast filter and strategy OpenCV otherwise
+uses.
+
+By default the app writes **uncompressed** PNGs (`PNG_MODE = "store"`), still
+normal lossless PNGs that every tool opens, about 4× faster to encode than
+OpenCV's compressed default and about 50% larger. Uncompressed PNG needs a
+recent OpenCV; on older builds it quietly falls back to the compressed default.
+Set `PNG_MODE = "default"` to favour file size.
+
+On a Pi 4 at 4K greyscale, compressed PNG measured about 4–5 fps.
 
 ### H.264 — the caveat
 
-Hugely more efficient, hardware-accelerated, and produces the smallest files by
-a wide margin. The compression artefacts land on moving subjects.
+Hugely more efficient, and produces the smallest files by a wide margin. The
+compression artefacts land on moving subjects.
+
+Hardware-accelerated only at **1080p and below**: the Pi 4's encoder cannot
+handle more, and above that the app uses a software encoder that is *slower*
+than MJPEG. Even at 1080p it is used only if a streaming test passes first;
+the Format ⓘ tooltip states which encoder you will get.
 
 If storage forces H.264:
 

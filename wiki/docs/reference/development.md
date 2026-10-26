@@ -114,12 +114,17 @@ Follow the existing seams.
 
 ### A new output format
 
-1. `constants.py` → add to `OUTPUT_FORMATS`
+1. `formats.py` → an `OutputFormat` (stable `key`, display `label`,
+   extension, whether it is an image stack, tooltip description), listed in
+   `OUTPUT_FORMATS`
 2. `record.py` → a writer class with `write(frame, index)` and `close()`,
    and a branch in `make_writer()`
-3. `benchmark.py` → an entry in `_FORMAT_WRITE_RATES_MBS` and
-   `_GREYSCALE_FACTORS`
-4. `main_window.py` → a short description in the tooltip table
+3. `record.py` → an `encoder_signature()` branch, if the encoder has settings
+   that change its speed or file size
+
+Code and profiles refer to a format by its `key`; never compare labels, so a
+label can be reworded without breaking saved profiles. The UI, capacity table
+and fps measurement pick up a new format automatically.
 
 ### A new metadata field
 
@@ -158,7 +163,7 @@ pushing, check by hand:
 - [ ] Load `example_metadata_list.csv` and step through it
 
 Logic that is not UI-bound *can* be tested directly, and is worth it for
-anything with real branching — CSV parsing, file naming, headroom maths:
+anything with real branching — CSV parsing, file naming, capacity maths:
 
 ```bash
 python3 -c "

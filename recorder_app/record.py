@@ -36,7 +36,13 @@ from pathlib import Path
 
 import numpy as np
 
-from constants import OUTPUT_FORMATS, APP_VERSION
+import formats
+from formats import OutputFormat
+
+from constants import (APP_VERSION,
+                       PNG_COMPRESSION_LEVEL, PNG_MODE, TIFF_COMPRESSION,
+                       IMAGE_STACK_WORKERS,
+                       FRAME_QUEUE_SIZE, ENABLE_HARDWARE_H264)
 
 
 # =============================================================================
@@ -48,8 +54,7 @@ class RecordingSettings:
     """Everything needed to start a recording. Assembled from the UI form."""
     save_dir:       Path
     file_name:      str
-    folder_name:    str
-    format_label:   str
+    output_format:  OutputFormat
     frame_width:    int
     frame_height:   int
     fps:            float
@@ -62,14 +67,11 @@ class RecordingSettings:
 
     @property
     def is_image_stack(self) -> bool:
-        return "stack" in self.format_label.lower()
+        return self.output_format.is_image_stack
 
     @property
     def file_extension(self) -> str:
-        for display_label, extension, _description in OUTPUT_FORMATS:
-            if display_label == self.format_label:
-                return extension
-        return ".avi"
+        return self.output_format.extension
 
     @property
     def output_dir(self) -> Path:
@@ -138,15 +140,15 @@ class VideoWriter:
     """
 
     _FOURCC_BY_FORMAT = {
-        "MJPEG video (.avi)": "MJPG",
-        "H.264 video (.mp4)": "mp4v",
+        formats.MJPEG.key: "MJPG",
+        formats.H264.key:  "mp4v",
     }
 
     def __init__(self, settings: RecordingSettings):
         import cv2
         self._cv2 = cv2
 
-        fourcc_code = self._FOURCC_BY_FORMAT.get(settings.format_label, "MJPG")
+        fourcc_code = self._FOURCC_BY_FORMAT.get(settings.output_format.key, "MJPG")
         fourcc      = cv2.VideoWriter_fourcc(*fourcc_code)
         is_colour   = settings.channels == 3
 
@@ -163,16 +165,71 @@ class VideoWriter:
                 f"Could not open video writer for {settings.video_file}. "
                 f"Check that the codec '{fourcc_code}' is available."
             )
-        self._is_colour = is_colour
+        self._is_colour     = is_colour
+        self._expected_size = (settings.frame_width, settings.frame_height)
 
     def write(self, frame: np.ndarray, frame_index: int) -> None:
-        # OpenCV expects BGR for colour frames; our pipeline produces RGB
-        if self._is_colour and frame.ndim == 3:
-            frame = self._cv2.cvtColor(frame, self._cv2.COLOR_RGB2BGR)
+        # Verify the first frame matches what the writer was opened with.
+        # cv2.VideoWriter.write() returns nothing and silently ignores frames
+        # of the wrong size, so without this check a dimension mismatch
+        # produces a valid-looking file containing only a header — which is
+        # exactly what stride padding on the camera's YUV output once caused.
+        if frame_index == 0:
+            actual_height, actual_width = frame.shape[:2]
+            if (actual_width, actual_height) != self._expected_size:
+                raise ValueError(
+                    f"Frame size {actual_width}x{actual_height} does not match "
+                    f"the video's {self._expected_size[0]}x{self._expected_size[1]}. "
+                    f"Every frame would be silently discarded, leaving an empty "
+                    f"video file."
+                )
+            actual_channels = 1 if frame.ndim == 2 else frame.shape[2]
+            expected_channels = 3 if self._is_colour else 1
+            if actual_channels != expected_channels:
+                raise ValueError(
+                    f"Frame has {actual_channels} channel(s) but the video was "
+                    f"opened for {expected_channels}."
+                )
+
+        # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects
         self._writer.write(frame)
 
     def close(self) -> None:
         self._writer.release()
+
+
+def image_encode_flags(cv2, extension: str) -> list:
+    """
+    OpenCV imwrite flags for one image format, from constants.py.
+
+    One function for every image writer so the serial fallback and the
+    parallel writer can never disagree about how a file is encoded.
+
+    Each option is looked up with getattr because the Pi's OpenCV is whatever
+    apt provides and may predate a flag. A missing flag means "use OpenCV's
+    default", never an error: encoding slower than intended is better than a
+    recording that will not start.
+    """
+    if extension == ".png":
+        if PNG_COMPRESSION_LEVEL is not None:
+            return [cv2.IMWRITE_PNG_COMPRESSION, PNG_COMPRESSION_LEVEL]
+        if PNG_MODE == "store":
+            png_filter = getattr(cv2, "IMWRITE_PNG_FILTER", None)
+            filter_none = getattr(cv2, "IMWRITE_PNG_FILTER_NONE", None)
+            if png_filter is not None and filter_none is not None:
+                return [cv2.IMWRITE_PNG_COMPRESSION, 0, png_filter, filter_none]
+            # Level 0 alone measured no faster than the default, so without
+            # the filter flag there is nothing to gain; keep the default.
+        return []
+
+    if extension in (".tiff", ".tif"):
+        tiff_flag = getattr(cv2, "IMWRITE_TIFF_COMPRESSION", None)
+        if tiff_flag is None:
+            return []
+        codes = {"none": 1, "lzw": 5, "deflate": 8}   # TIFF compression tags
+        if TIFF_COMPRESSION in codes:
+            return [tiff_flag, codes[TIFF_COMPRESSION]]
+    return []
 
 
 class ImageStackWriter:
@@ -188,26 +245,751 @@ class ImageStackWriter:
         self._extension = settings.file_extension
         settings.output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Confirm an image can actually be written here BEFORE the recording
+        # starts. imwrite reports failure by returning False, and in the
+        # parallel writer that happens on a worker thread — so without this an
+        # unwritable directory or an unsupported format would only be
+        # discovered after a whole recording had run, having produced nothing.
+        probe_file = settings.output_dir / f".write_probe{self._extension}"
+        try:
+            if not cv2.imwrite(str(probe_file), np.zeros((8, 8), dtype=np.uint8)):
+                raise OSError(
+                    f"Cannot write {self._extension} files to "
+                    f"{settings.output_dir}. The format may be unsupported by "
+                    f"this OpenCV build, or the directory may not be writable."
+                )
+        finally:
+            try:
+                probe_file.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
     def write(self, frame: np.ndarray, frame_index: int) -> None:
         # Frame counter is 1-based and zero-padded to 5 digits
         image_file = (
             self._settings.output_dir
             / f"{self._settings.file_name}_{frame_index + 1:05d}{self._extension}"
         )
-        # OpenCV expects BGR for colour; greyscale 2D arrays pass through as-is
-        if frame.ndim == 3:
-            frame = self._cv2.cvtColor(frame, self._cv2.COLOR_RGB2BGR)
-        self._cv2.imwrite(str(image_file), frame)
+        # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects
+        self._cv2.imwrite(
+            str(image_file), frame, image_encode_flags(self._cv2, self._extension)
+        )
 
     def close(self) -> None:
         pass   # nothing to finalise for an image stack
 
 
-def make_writer(settings: RecordingSettings):
-    """Return the appropriate writer for the selected output format."""
+# =============================================================================
+# FFmpeg-based video writer — multithreaded MJPEG and hardware H.264
+# =============================================================================
+
+def _ffmpeg_encoder_available(encoder_name: str) -> bool:
+    """Check whether this machine's ffmpeg build offers a given encoder."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-encoders"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return encoder_name in result.stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+_HARDWARE_H264_CACHE: dict = {}
+
+# The Pi 4's hardware H.264 encoder cannot exceed 1920x1080. Above that it
+# fails with "Could not find a valid device" — the same message it gives when
+# no encoder device exists at all, which makes the real cause easy to
+# misdiagnose. Checked before probing so the common case needs no subprocess.
+HARDWARE_H264_MAX_WIDTH  = 1920
+HARDWARE_H264_MAX_HEIGHT = 1088     # 1080 rounded up to the macroblock boundary
+
+
+def hardware_h264_available(width: int, height: int, channels: int = 1) -> bool:
+    """
+    True when the Pi's hardware H.264 encoder can handle THIS exact pipeline.
+
+    The probe runs the real recording command — same raw pixel format, same
+    resolution, same encoder flags — with a few synthetic frames piped in, and
+    checks the resulting file is valid.
+
+    Testing anything less has failed twice. A probe using ffmpeg's synthetic
+    `lavfi` source feeds the encoder yuv420p directly, skipping the pixel
+    format conversion a real greyscale recording needs, and passed on a
+    configuration that then died mid-recording with "VIDIOC_STREAMON failed".
+    An earlier probe at a small fixed size passed on hardware that could not
+    handle the actual resolution. Only an end-to-end probe predicts the
+    end-to-end result.
+
+    Cached per (resolution, channels); the answer cannot change while running.
+    """
+    cache_key = (width, height, channels)
+    if cache_key in _HARDWARE_H264_CACHE:
+        return _HARDWARE_H264_CACHE[cache_key]
+
+    available = False
+    if (ENABLE_HARDWARE_H264
+            and width <= HARDWARE_H264_MAX_WIDTH
+            and height <= HARDWARE_H264_MAX_HEIGHT
+            and _ffmpeg_encoder_available("h264_v4l2m2m")):
+        available = _probe_hardware_encode(width, height, channels)
+
+    _HARDWARE_H264_CACHE[cache_key] = available
+    return available
+
+
+def _probe_hardware_encode(width: int, height: int, channels: int) -> bool:
+    """
+    Stream frames through the hardware encoder exactly as a recording does,
+    and verify real output comes out.
+
+    Streaming matters and is not a detail. Writing every frame at once and
+    closing the pipe (subprocess.run with `input=`) takes a different path
+    through the V4L2 encoder than feeding frames one at a time into a live
+    pipe — the one-shot form passed on a configuration whose streaming form
+    then died with "VIDIOC_STREAMON failed on output context". The probe
+    therefore uses Popen, incremental writes and a real pause between frames,
+    so it fails wherever a recording would.
+    """
+    import subprocess
+    import tempfile
+
+    pixel_format    = "gray" if channels == 1 else "bgr24"
+    bytes_per_frame = width * height * (1 if channels == 1 else 3)
+    probe_frames    = 8
+    frame_payload   = b"\x10" * bytes_per_frame
+
+    with tempfile.TemporaryDirectory() as temporary_dir:
+        output_file = Path(temporary_dir) / "probe.mp4"
+        command = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "rawvideo",
+            "-pix_fmt", pixel_format,
+            "-s", f"{width}x{height}",
+            "-r", "30",
+            "-i", "-",
+        ] + _HARDWARE_H264_ARGUMENTS + [str(output_file)]
+
+        process = None
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin  = subprocess.PIPE,
+                stdout = subprocess.DEVNULL,
+                stderr = subprocess.PIPE,
+            )
+            for _ in range(probe_frames):
+                if process.poll() is not None:
+                    return False                 # encoder already died
+                process.stdin.write(frame_payload)
+                process.stdin.flush()
+                time.sleep(0.02)                 # let the encoder actually run
+            process.stdin.close()
+            process.wait(timeout=30)
+        except (OSError, subprocess.SubprocessError, BrokenPipeError):
+            if process is not None:
+                try:
+                    process.kill()
+                    process.wait(timeout=5)
+                except Exception:
+                    pass
+            return False
+
+        # A zero exit code alone is not enough — ffmpeg can exit cleanly having
+        # written nothing. Require a file with real content.
+        return (process.returncode == 0
+                and output_file.exists()
+                and output_file.stat().st_size > 1000)
+
+
+def disable_hardware_h264(width: int, height: int, channels: int) -> None:
+    """
+    Record that hardware encoding failed for this configuration, so later
+    recordings in this session fall back to software instead of failing the
+    same way again.
+
+    Called when a recording dies despite the probe passing — no probe can
+    anticipate everything, for instance the encoder device being held by
+    another process at the moment recording starts.
+    """
+    _HARDWARE_H264_CACHE[(width, height, channels)] = False
+
+
+# Encoder flags shared by the probe and the real recording, so the probe
+# cannot drift out of sync with what actually runs.
+_HARDWARE_H264_ARGUMENTS = [
+    "-c:v", "h264_v4l2m2m",
+    # Convert to yuv420p explicitly rather than leaving ffmpeg to negotiate it.
+    # The V4L2 encoder is particular about its input format, and an implicit
+    # conversion is what produced "VIDIOC_STREAMON failed" on greyscale input.
+    "-vf", "format=yuv420p",
+    # Hardware encoders take a bitrate rather than a quality scale. Generous,
+    # since the point here is speed, not small files.
+    "-b:v", "25M",
+]
+
+_SOFTWARE_H264_ARGUMENTS = [
+    "-c:v", "libx264",
+    "-preset", "ultrafast",
+    "-crf", "20",
+    "-threads", "0",
+    "-pix_fmt", "yuv420p",
+]
+
+
+def h264_encoder_note(width: int, height: int, channels: int = 1) -> str:
+    """
+    Explain which H.264 encoder will be used, and why.
+
+    Surfaced in the UI because the difference is large: the hardware encoder
+    costs almost no CPU, while the software fallback is slower than MJPEG at
+    high resolution — the opposite of what "H.264 is more efficient" suggests.
+    """
+    if hardware_h264_available(width, height, channels):
+        return "hardware encoder (fast, negligible CPU)"
+    if not ENABLE_HARDWARE_H264:
+        return "software encoder — hardware encoding disabled in constants.py"
+    if width > HARDWARE_H264_MAX_WIDTH or height > HARDWARE_H264_MAX_HEIGHT:
+        return (f"software encoder — the Pi's hardware H.264 encoder only "
+                f"handles up to {HARDWARE_H264_MAX_WIDTH}x1080, and this is "
+                f"{width}x{height}. Expect it to be SLOWER than MJPEG here.")
+    return "software encoder — the hardware encoder failed a test encode here"
+
+
+class HardwareEncoderStartError(RuntimeError):
+    """
+    The hardware H.264 encoder failed as ffmpeg started. It has already been
+    disabled for this configuration, so a retry uses the software encoder.
+    """
+
+
+class FFmpegVideoWriter:
+    """
+    Writes frames by piping them to ffmpeg.
+
+    Replaces cv2.VideoWriter for video formats because it unlocks two things
+    OpenCV cannot offer on a Pi:
+
+      MJPEG  — ffmpeg's encoder is multithreaded, so JPEG compression spreads
+               across all four cores instead of saturating the one writer
+               thread. This is the only lever available for MJPEG, which has
+               no hardware encoder on the Pi.
+
+      H.264  — `h264_v4l2m2m` runs on the Pi's dedicated encoder block rather
+               than the CPU, which is dramatically faster at high resolution.
+               (The previous "H.264" option used OpenCV's `mp4v` fourcc, which
+               is a SOFTWARE MPEG-4 encoder — not hardware, and not actually
+               H.264. That mislabelling is why it performed no better than
+               MJPEG.)
+
+    Raw frames are written to ffmpeg's stdin. That write blocks if ffmpeg falls
+    behind, which is the correct backpressure: it fills our bounded queue, and
+    the capture thread then counts honest drops rather than silently buffering.
+    """
+
+    STARTUP_CHECK_S = 1.0
+
+    def __init__(self, settings: RecordingSettings):
+        import subprocess
+        self._subprocess = subprocess
+
+        self._expected_size = (settings.frame_width, settings.frame_height)
+        self._channels      = settings.channels
+        pixel_format        = "gray" if settings.channels == 1 else "bgr24"
+
+        settings.output_dir.mkdir(parents=True, exist_ok=True)
+
+        encoder_arguments  = self._encoder_arguments(settings)
+        self._used_hardware = "h264_v4l2m2m" in encoder_arguments
+        self._settings_key  = (settings.frame_width, settings.frame_height,
+                               settings.channels)
+
+        command = [
+            "ffmpeg",
+            "-hide_banner", "-loglevel", "error",
+            "-y",                                  # overwrite; UI already confirmed
+            "-f", "rawvideo",
+            "-pix_fmt", pixel_format,
+            "-s", f"{settings.frame_width}x{settings.frame_height}",
+            "-r", f"{settings.fps}",
+            "-i", "-",                             # read frames from stdin
+        ] + encoder_arguments + [str(settings.video_file)]
+
+        self._process = subprocess.Popen(
+            command,
+            stdin  = subprocess.PIPE,
+            stdout = subprocess.DEVNULL,
+            stderr = subprocess.PIPE,
+        )
+        self._command = command
+
+        # ffmpeg validates its arguments and encoder as it starts, so a bad
+        # choice makes it exit before any frame is sent. On a Pi 4 that takes
+        # about 0.45 s, so wait up to STARTUP_CHECK_S for an early exit. A
+        # healthy ffmpeg never exits here, so this always waits the full time.
+        # Catching the failure now lets make_writer fall back to another
+        # writer instead of a broken pipe on the first write.
+        try:
+            self._process.wait(timeout=self.STARTUP_CHECK_S)
+        except subprocess.TimeoutExpired:
+            pass
+        if self._process.poll() is not None:
+            stderr_output = b""
+            if self._process.stderr:
+                stderr_output = self._process.stderr.read() or b""
+            message = ("ffmpeg failed to start:\n"
+                       + stderr_output.decode(errors="replace")[:500])
+            if self._used_hardware:
+                disable_hardware_h264(*self._settings_key)
+                raise HardwareEncoderStartError(message)
+            raise RuntimeError(message)
+
+    @staticmethod
+    def _encoder_arguments(settings: RecordingSettings) -> list:
+        """
+        Encoder flags for the chosen format.
+
+        H.264 uses the same constants the probe tests with, so what gets
+        probed and what gets run can never diverge.
+        """
+        if settings.output_format is formats.H264:
+            if hardware_h264_available(settings.frame_width,
+                                       settings.frame_height,
+                                       settings.channels):
+                return list(_HARDWARE_H264_ARGUMENTS)
+            # Slower than MJPEG at high resolution — see h264_encoder_note.
+            return list(_SOFTWARE_H264_ARGUMENTS)
+
+        # MJPEG: -q:v 3 is visually lossless; -threads 0 uses every core
+        return ["-c:v", "mjpeg", "-q:v", "3", "-threads", "0"]
+
+    def write(self, frame: np.ndarray, frame_index: int) -> None:
+        if frame_index == 0:
+            actual_height, actual_width = frame.shape[:2]
+            if (actual_width, actual_height) != self._expected_size:
+                raise ValueError(
+                    f"Frame size {actual_width}x{actual_height} does not match "
+                    f"the video's {self._expected_size[0]}x{self._expected_size[1]}."
+                )
+
+        # The pipe reads straight from the frame's memory; ascontiguousarray
+        # copies only in the rare case the frame is not contiguous already.
+        frame = np.ascontiguousarray(frame)
+
+        try:
+            self._process.stdin.write(memoryview(frame).cast("B"))
+        except BrokenPipeError:
+            stderr_output = b""
+            if self._process.stderr:
+                stderr_output = self._process.stderr.read() or b""
+            message = stderr_output.decode(errors="replace")[:500]
+
+            # If the hardware encoder failed despite passing its probe, stop
+            # choosing it for this configuration. The next attempt then uses
+            # the software encoder rather than repeating the same failure.
+            if self._used_hardware:
+                disable_hardware_h264(*self._settings_key)
+                raise RuntimeError(
+                    "The hardware H.264 encoder failed during recording and "
+                    "has been disabled for this resolution. Try again — it "
+                    "will use the software encoder.\n\n" + message
+                )
+            raise RuntimeError("ffmpeg exited during recording:\n" + message)
+
+    def close(self) -> None:
+        """Close the pipe and wait for ffmpeg to finalise the container."""
+        if self._process.stdin:
+            try:
+                self._process.stdin.close()
+            except OSError:
+                pass
+        # Finalising can take a moment on a long recording; the container's
+        # index is written here, so cutting it short corrupts the file.
+        try:
+            self._process.wait(timeout=120)
+        except self._subprocess.TimeoutExpired:
+            self._process.kill()
+            self._process.wait()
+
+
+# =============================================================================
+# Parallel image stack writer
+# =============================================================================
+
+class ParallelImageStackWriter:
+    """
+    Writes each frame as a separate image, encoding across several threads.
+
+    Image stacks have no hardware encoder on the Pi, so parallelism is the only
+    way to use more than one core. Frames are independent files, which makes
+    this straightforward — unlike a video container, where frames must be
+    written in order.
+
+    Threads rather than processes because OpenCV releases the GIL during
+    imwrite, so its encoding genuinely runs in parallel; processes would add
+    the cost of pickling a full-resolution frame to each worker.
+    """
+
+    def __init__(self, settings: RecordingSettings,
+                 worker_count: int = IMAGE_STACK_WORKERS):
+        import cv2
+        from concurrent.futures import ThreadPoolExecutor
+        import threading
+        self._cv2       = cv2
+        self._settings  = settings
+        self._extension = settings.file_extension
+        settings.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Confirm an image can actually be written here BEFORE the recording
+        # starts. imwrite reports failure by returning False, and in the
+        # parallel writer that happens on a worker thread — so without this an
+        # unwritable directory or an unsupported format would only be
+        # discovered after a whole recording had run, having produced nothing.
+        probe_file = settings.output_dir / f".write_probe{self._extension}"
+        try:
+            if not cv2.imwrite(str(probe_file), np.zeros((8, 8), dtype=np.uint8)):
+                raise OSError(
+                    f"Cannot write {self._extension} files to "
+                    f"{settings.output_dir}. The format may be unsupported by "
+                    f"this OpenCV build, or the directory may not be writable."
+                )
+        finally:
+            try:
+                probe_file.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+        # Three workers by default: the Pi 4 has four cores, and capture plus
+        # the main thread need headroom. More workers would contend rather
+        # than help.
+        self._flags   = image_encode_flags(cv2, self._extension)
+        self._pool    = ThreadPoolExecutor(max_workers=worker_count)
+        self._futures = []
+        self._error   = None
+
+        # ThreadPoolExecutor's queue is unbounded, so submit() always returns
+        # instantly no matter how far behind the workers are. Left unchecked
+        # that would buffer full-resolution frames in RAM until the Pi ran out,
+        # and would also hide the true encode cost from any timing around
+        # write(). A semaphore caps how many frames may be in flight, so
+        # write() blocks once the workers are saturated — the same honest
+        # backpressure the video path gets from ffmpeg's pipe.
+        self._slots = threading.Semaphore(worker_count * 2)
+
+    def write(self, frame: np.ndarray, frame_index: int) -> None:
+        # Surface an earlier worker failure immediately rather than letting a
+        # whole recording run against a directory that cannot be written. The
+        # capture loop turns this into a visible recording error.
+        if self._error is not None:
+            raise self._error
+
+        image_file = (
+            self._settings.output_dir
+            / f"{self._settings.file_name}_{frame_index + 1:05d}{self._extension}"
+        )
+        # Blocks when the pool is saturated, which is what makes the queue
+        # bounded and the timing meaningful.
+        self._slots.acquire()
+        # Frames are handed off by reference; the capture thread never reuses a
+        # buffer while it is still in flight, so no copy is needed here.
+        self._futures.append(
+            self._pool.submit(self._write_one, frame, image_file)
+        )
+
+    def _encode_flags(self) -> list:
+        """Per-format encoder flags; see image_encode_flags."""
+        return self._flags
+
+    def _write_one(self, frame: np.ndarray, image_file) -> None:
+        try:
+            # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects.
+            # imwrite returns False rather than raising on most failures —
+            # an unwritable path, an unsupported extension, a full disk — so
+            # the result must be checked or frames vanish silently.
+            if not self._cv2.imwrite(str(image_file), frame, self._encode_flags()):
+                raise OSError(
+                    f"Could not write {image_file.name}. The format may be "
+                    f"unsupported for this image, or the disk may be full."
+                )
+        except Exception as write_error:
+            if self._error is None:      # keep the FIRST error, it explains the rest
+                self._error = write_error
+        finally:
+            self._slots.release()
+
+    def close(self) -> None:
+        """Wait for every queued frame to finish writing."""
+        self._pool.shutdown(wait=True)
+        if self._error is not None:
+            raise self._error
+
+
+# =============================================================================
+# Throughput calibration: what each format can actually sustain
+# =============================================================================
+#
+# A recording's frame rate is capped by whichever of three stages is slowest:
+#
+#   camera   — sensor readout, ISP processing, and our crop/copy
+#   encoding — compressing each frame (CPU, or the hardware H.264 block)
+#   SD card  — writing the encoded bytes
+#
+# Which one binds depends on resolution, colour mode AND format, so each
+# format is measured separately. The first two are measured by running the
+# real recording machinery — capture thread, queue, writer thread — flat out,
+# because they overlap in a real recording: timing them back to back in one
+# loop reports roughly 1/(capture + encode) where a recording reaches
+# 1/max(capture, encode), which can understate the true rate by half.
+#
+# The SD card is NOT measured inside that run. A few seconds of writes land in
+# the operating system's RAM cache before reaching the card, so a short run
+# cannot see the card's real speed. Its cap is computed instead from the
+# measured bytes per frame and the card's write speed (Settings -> Recalibrate
+# write speed), which forces data to the card with fsync.
+
+def measure_format_throughput(
+    camera,
+    settings,
+    sensor_max_fps: float,
+    warmup_seconds: float = 1.0,
+    window_seconds: float = 3.0,
+    wait=time.sleep,
+) -> dict:
+    """
+    Run one format flat out and report what the camera and encoder sustain,
+    plus how many bytes a frame takes on disk.
+
+    `wait` is how this function pauses between phases. The UI passes a version
+    that keeps processing events, so the window stays responsive during the
+    roughly five seconds each format takes.
+
+    Raises RuntimeError if the format cannot record at all.
+    """
+    import tempfile
+    from dataclasses import replace
+
+    # The camera must run at the sensor mode's maximum, not at whatever frame
+    # rate is selected in the UI, or the measurement reports that selection
+    # back instead of the real ceiling.
+    previous_fps = getattr(camera, "_target_fps", None)
+    camera.set_capture_fps(sensor_max_fps)
+
+    try:
+        last_error = None
+        # Two attempts: if the hardware H.264 encoder fails once frames stream,
+        # it marks itself unavailable, and the retry uses the software encoder.
+        for _attempt in range(2):
+            # Written inside the save directory so encoding happens on the real
+            # drive's filesystem; hidden and removed afterwards.
+            with tempfile.TemporaryDirectory(
+                dir=settings.save_dir, prefix=".throughput_probe_"
+            ) as temporary_dir:
+                probe_settings = replace(
+                    settings,
+                    save_dir   = Path(temporary_dir),
+                    file_name  = "throughput_probe",
+                    duration_s = None,
+                    # Pace the capture loop above the sensor's maximum so the
+                    # camera itself sets the rate, not our scheduler
+                    fps        = sensor_max_fps * 1.5,
+                )
+                session = RecordingSession(camera, probe_settings)
+                try:
+                    session.start()
+                    wait(warmup_seconds)
+                    before = _snapshot(session.stats)
+                    wait(window_seconds)
+                    after = _snapshot(session.stats)
+                finally:
+                    session.request_stop()
+                    deadline = time.perf_counter() + 60
+                    while not session.is_finished and time.perf_counter() < deadline:
+                        wait(0.05)
+                    summary = session.finalize()
+
+                if summary.get("error"):
+                    last_error = summary["error"]
+                    continue
+
+                output_bytes = _probe_output_bytes(probe_settings)
+
+            frames_written = summary.get("frames_written", 0)
+            if frames_written == 0 or after["time"] <= before["time"]:
+                last_error = "no frames were written"
+                continue
+
+            elapsed       = after["time"] - before["time"]
+            offered       = (after["captured"] + after["dropped"]
+                             - before["captured"] - before["dropped"])
+            written       = after["written"] - before["written"]
+            dropped       = after["dropped"] - before["dropped"]
+            camera_fps    = offered / elapsed
+            written_fps   = written / elapsed
+
+            # Frames dropped at the queue mean capture outran the writer, so
+            # encoding is the limit. Otherwise the writer kept up and the
+            # camera set the pace.
+            pipeline_limit = "encoding" if dropped > 0 else "camera"
+            pipeline_fps   = min(camera_fps, written_fps) if dropped == 0 else written_fps
+
+            return {
+                "pipeline_fps":    round(pipeline_fps, 1),
+                "pipeline_limit":  pipeline_limit,
+                "camera_fps":      round(camera_fps, 1),
+                "bytes_per_frame": int(output_bytes / frames_written),
+                "measured_on":     datetime.now().strftime("%Y-%m-%d"),
+            }
+
+        raise RuntimeError(f"Could not record in this format: {last_error}")
+    finally:
+        if previous_fps is not None:
+            camera.set_capture_fps(previous_fps)
+
+
+def _snapshot(stats) -> dict:
+    """Read the live counters at one instant."""
+    return {
+        "time":     time.perf_counter(),
+        "captured": stats.frames_captured,
+        "dropped":  stats.frames_dropped,
+        "written":  stats.frames_written,
+    }
+
+
+def _probe_output_bytes(settings) -> int:
+    """Total size of the media a probe produced (excluding the timestamp CSV)."""
     if settings.is_image_stack:
-        return ImageStackWriter(settings)
-    return VideoWriter(settings)
+        pattern = f"{settings.file_name}_*{settings.file_extension}"
+        return sum(f.stat().st_size for f in settings.output_dir.glob(pattern))
+    return settings.video_file.stat().st_size if settings.video_file.exists() else 0
+
+
+def capacity_for(measurement: dict, write_speed_mbs, free_space_gb,
+                 selected_fps: float) -> dict:
+    """
+    Combine a stored measurement with the card's current state.
+
+    Kept separate from the measurement so the table stays right when things
+    change that do not require re-measuring: recalibrating write speed, or the
+    card filling up.
+
+    Returns max_fps, what limits it, and how many minutes fit on the card at
+    the rate a recording would actually run (the selected rate, unless that
+    exceeds the maximum).
+    """
+    max_fps = measurement["pipeline_fps"]
+    limit   = measurement["pipeline_limit"]
+    bytes_per_frame = measurement.get("bytes_per_frame", 0)
+
+    if write_speed_mbs and bytes_per_frame > 0:
+        from constants import BENCHMARK_SAFETY_MARGIN
+        card_bytes_per_second = write_speed_mbs * 1024 * 1024 * BENCHMARK_SAFETY_MARGIN
+        card_fps = card_bytes_per_second / bytes_per_frame
+        if card_fps < max_fps:
+            max_fps, limit = card_fps, "SD card"
+
+    recording_fps = min(selected_fps, max_fps) if selected_fps > 0 else max_fps
+    minutes = None
+    if free_space_gb and bytes_per_frame > 0 and recording_fps > 0:
+        free_bytes = free_space_gb * 1024 ** 3
+        minutes = free_bytes / (bytes_per_frame * recording_fps * 60)
+
+    return {
+        "max_fps":       round(max_fps, 1),
+        "limit":         limit,
+        "recording_fps": recording_fps,
+        "minutes":       minutes,
+        "mb_per_frame":  bytes_per_frame / 1024 / 1024,
+    }
+
+
+def encoder_signature(output_format: OutputFormat) -> str:
+    """
+    The encoder settings that affect speed and size for one format.
+
+    Part of the cache key, so changing an encoder setting in constants.py
+    shows the format as unmeasured instead of reusing figures that described
+    a different encoder.
+    """
+    from constants import PNG_MODE, TIFF_COMPRESSION, ENABLE_HARDWARE_H264
+    if output_format is formats.PNG:
+        return f"png-{PNG_MODE}"
+    if output_format is formats.TIFF:
+        return f"tiff-{TIFF_COMPRESSION}"
+    if output_format is formats.H264:
+        return f"h264-hw{int(ENABLE_HARDWARE_H264)}"
+    return output_format.key
+
+
+def throughput_cache_key(width: int, height: int, channels: int,
+                         output_format: OutputFormat) -> str:
+    """
+    Identify one measurable combination.
+
+    Framerate is deliberately absent: the measurement finds the CEILING, which
+    does not depend on the rate selected.
+    """
+    colour = "grey" if channels == 1 else "colour"
+    return f"{width}x{height}_{colour}_{encoder_signature(output_format)}"
+
+
+# =============================================================================
+# Writer selection
+# =============================================================================
+
+def make_writer(settings: RecordingSettings):
+    """
+    Return the appropriate writer for the selected output format.
+
+    Video goes through ffmpeg (multithreaded MJPEG, hardware H.264 where the
+    resolution allows); image stacks go through a small thread pool. Both fall
+    back to the single-threaded OpenCV path if anything is unavailable, so a
+    missing ffmpeg degrades performance rather than breaking recording.
+
+    Fallbacks are recorded on the writer as `fallback_reason` rather than
+    passing silently: dropping to the slow path can halve the achievable
+    frame rate, and finding out from a performance mystery later is far worse
+    than being told at the time.
+    """
+    if settings.is_image_stack:
+        try:
+            writer = ParallelImageStackWriter(settings)
+            writer.fallback_reason = None
+            return writer
+        except Exception as parallel_error:
+            writer = ImageStackWriter(settings)
+            writer.fallback_reason = (
+                f"parallel image writing unavailable ({parallel_error}); "
+                f"using the single-threaded writer"
+            )
+            return writer
+
+    hardware_note = None
+    try:
+        try:
+            writer = FFmpegVideoWriter(settings)
+        except HardwareEncoderStartError as hardware_error:
+            # Hardware H.264 is now disabled for this configuration, so this
+            # second attempt runs ffmpeg with the software encoder.
+            hardware_note = (f"hardware H.264 encoder failed to start "
+                             f"({str(hardware_error)[:200]}); using software H.264")
+            writer = FFmpegVideoWriter(settings)
+        writer.fallback_reason = hardware_note
+        return writer
+    except Exception as ffmpeg_error:
+        writer = VideoWriter(settings)
+        if settings.output_format is formats.H264:
+            fallback = ("OpenCV's MPEG-4 Part 2 encoder — the file is NOT H.264, "
+                        "and encoding is single-threaded and slower")
+        else:
+            fallback = "OpenCV, which is single-threaded and slower"
+        writer.fallback_reason = (
+            f"ffmpeg unavailable ({str(ffmpeg_error)[:200]}); using {fallback}"
+        )
+        return writer
 
 
 # =============================================================================
@@ -225,7 +1007,8 @@ class RecordingSession:
         summary = session.stop()
     """
 
-    def __init__(self, camera, settings: RecordingSettings, queue_size: int = 60,
+    def __init__(self, camera, settings: RecordingSettings,
+                 queue_size: int = FRAME_QUEUE_SIZE,
                  preview_callback=None, preview_fps: float = 10.0):
         self._camera    = camera
         self._settings  = settings
@@ -253,7 +1036,14 @@ class RecordingSession:
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
     def start(self) -> None:
-        """Open the writer and launch both threads."""
+        """Open the writer, reconfigure the camera, and launch both threads."""
+        # Reconfigure the main stream to match the recording's colour mode
+        # BEFORE capture starts. For a greyscale recording this means the
+        # camera skips full-colour ISP processing entirely rather than
+        # capturing colour and discarding it afterward — see
+        # PiCamera.prepare_for_recording for why this matters.
+        self._camera.prepare_for_recording(self._settings.channels)
+
         self._writer         = make_writer(self._settings)
         self._running        = True
         self._start_time     = time.perf_counter()
@@ -288,6 +1078,16 @@ class RecordingSession:
     def frames_remaining(self) -> int:
         """Frames still buffered and waiting to be written."""
         return self._queue.qsize()
+
+    @property
+    def writer_note(self) -> str | None:
+        """Why the writer fell back to a slower or different encoder, if it did."""
+        return getattr(self._writer, "fallback_reason", None)
+
+    @property
+    def queue_capacity(self) -> int:
+        """How many frames the buffer between capture and writing can hold."""
+        return self._queue.maxsize
 
     def finalize(self) -> dict:
         """
@@ -332,6 +1132,7 @@ class RecordingSession:
             "drop_rate_pct":      self.stats.drop_rate_pct,
             "miss_rate_pct":      self.stats.miss_rate_pct,
             "frame_times_file":   str(timestamps_file) if timestamps_file else None,
+            "writer_note":        self.writer_note,
             "error":              str(self._error) if self._error else None,
         }
 
@@ -416,9 +1217,12 @@ class RecordingSession:
                 preview_interval is not None and now >= next_preview_at
             )
 
+            # A full queue means this frame would be dropped anyway, so the
+            # camera is asked not to copy it out of its buffer at all.
+            queue_full = self._queue.full()
             try:
                 frame, preview_frame = self._camera.capture_frame(
-                    self._settings.channels, want_preview
+                    self._settings.channels, want_preview, discard=queue_full
                 )
             except Exception as capture_error:
                 self._error   = capture_error
@@ -436,6 +1240,8 @@ class RecordingSession:
                         pass    # a preview failure must never stop a recording
 
             try:
+                if frame is None:
+                    raise queue.Full
                 self._queue.put_nowait(frame)
                 self.stats.frames_captured += 1
                 # Timestamps are the authoritative timing record: the container
@@ -479,15 +1285,24 @@ class RecordingSession:
     # ── Writer thread ──────────────────────────────────────────────────────────
 
     def _writer_loop(self) -> None:
-        """Pull frames off the queue and write them until sentinel is received."""
+        """
+        Pull frames off the queue and write them until sentinel is received.
+
+        After a write error the loop keeps consuming (and discarding) frames
+        until the sentinel. Stopping early would leave the queue full, and the
+        capture thread would then block forever trying to enqueue the sentinel.
+        """
+        write_failed = False
         while True:
             frame = self._queue.get()
             if frame is None:      # sentinel: capture finished and queue drained
                 break
+            if write_failed:
+                continue
             try:
                 self._writer.write(frame, self.stats.frames_written)
                 self.stats.frames_written += 1
             except Exception as write_error:
                 self._error   = write_error
                 self._running = False
-                break
+                write_failed  = True

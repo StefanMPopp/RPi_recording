@@ -16,6 +16,7 @@ import yaml
 from constants import (
     DEFAULT_CONFIG_PATH, DEFAULT_SAVE_DIR, METADATA_DEFAULTS, DEFAULT_FIELD_ORDER,
 )
+from formats import DEFAULT_FORMAT
 
 
 # =============================================================================
@@ -51,6 +52,12 @@ def _default_app_config() -> dict:
             "sd_write_speed_mbs": None,       # populated after first benchmark
             "sd_write_speed_measured_date": None,
         },
+        # Measured maximum sustained fps, keyed by resolution+colour+format.
+        # Populated by Settings -> Measure maximum fps. Machine-specific, so
+        # not committed — though unlike SD write speed, which depends on the
+        # individual card, these depend on the Pi model and camera and are
+        # broadly consistent across identical rigs.
+        "throughput": {},
         "app": {
             "save_dir":     DEFAULT_SAVE_DIR,
             "show_preview": True,
@@ -84,11 +91,10 @@ def default_profile() -> dict:
     return {
         "recording": {
             "save_dir":        DEFAULT_SAVE_DIR,
-            "output_format":   "MJPEG video (.avi)",
+            "output_format":   DEFAULT_FORMAT.key,
             "duration_s":      None,          # None = record until stopped
             "base_name":       "recording",
             "auto_file_name":  True,      # build the name from metadata
-            "folder_name":     "images",      # used for image stack mode only
         },
         "camera": {
             "sensor_mode":     None,          # None = first available mode

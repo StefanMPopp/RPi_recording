@@ -95,35 +95,45 @@ version:
 
 ---
 
-## Write headroom
+## Maximum frame rate
 
-The SD card can only write so fast. **Write headroom** is the percentage of that
-speed left unused at your current settings.
+Every recording is capped by the slowest of three stages, and which one binds
+depends on resolution, colour mode **and** format:
 
-| Headroom | Meaning |
-|---|---|
-| **> 30%** ✔ | Safe |
-| **10–30%** ⚠ | Marginal — drops possible if the Pi is busy |
-| **< 10%** ✖ | Expect dropped frames |
+| Stage | What it is | Typical when |
+|---|---|---|
+| **camera** | Sensor readout and image processing | High resolution, fast encoders |
+| **encoding** | Compressing each frame | MJPEG and compressed stacks at high resolution |
+| **SD card** | Writing the bytes | Uncompressed stacks at high resolution |
 
-Hover the ⓘ next to **Format** for a table of every format at your current
-resolution and framerate, including maximum recording time given free space.
+Nothing here is estimated. Run **Settings → Measure maximum fps** once for a
+resolution and colour mode: it records each format flat out for a few seconds
+(about 25 s in total). The ⓘ next to **Format** then shows one table — the
+maximum fps of every format, what limits it, megabytes per frame, and how long a
+recording fits on the card. The line under the selector summarises the chosen
+format and turns red if the selected frame rate is above its maximum.
 
-### If headroom is too low
+Measurements are stored per resolution and colour mode, so switching to an
+unmeasured combination shows it as not measured.
 
-In order of how much they help relative to what they cost:
+### If the frame rate you need is above the maximum
 
-1. **Switch to greyscale** — up to 3× less data, no loss for tracking
-2. **Lower the framerate** — proportional saving, no loss of spatial detail
-3. **Lower the resolution** — but check the field of view does not shrink
-4. **Switch to H.264** — large saving, with the tracking caveat above
-5. **Disable the preview** — frees CPU, small effect
+Read the **Limited by** column — the fix depends on it:
 
-!!! note "Recalibrate if the numbers look wrong"
-    Headroom is based on a measured write speed stored per Pi. If you have
-    swapped the SD card, run **Settings → Recalibrate write speed**. Cards also
-    slow as they fill and as they age, so recalibrate occasionally on older
-    cards.
+- **camera** — lower the resolution; nothing else helps.
+  `2028 × 1520` keeps the full field of view at a quarter of the pixels.
+- **encoding** — choose a faster format (the table shows which), switch to
+  greyscale, or lower the resolution.
+- **SD card** — choose a format with smaller frames, switch to greyscale, or
+  use a faster card. The stack formats are written uncompressed by default for
+  speed; if the card is what limits them, a compressed setting may record
+  faster (see [file formats](../reference/file_formats.md)).
+
+!!! note "Measure the card once per card"
+    The SD card limit uses a write speed measured per card
+    (**Settings → Recalibrate write speed**, run automatically by the first fps
+    measurement). Re-run it after swapping the card. Cards also slow as they fill
+    and age.
 
 ---
 
@@ -159,4 +169,4 @@ In order of how much they help relative to what they cost:
     - 2028 × 1520
     - 30 fps
     - **Colour**
-    - MJPEG — check headroom, colour roughly triples the data rate
+    - MJPEG — measure first: colour roughly triples the data per frame

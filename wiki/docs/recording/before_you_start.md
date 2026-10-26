@@ -74,7 +74,7 @@ Before the first real trial, record 10 seconds and check:
 - The metadata file sits next to the footage and contains what you expect
 
 If frames are being dropped, fix it now rather than losing a real trial — see
-[choosing settings](choosing_settings.md#write-headroom).
+[choosing settings](choosing_settings.md#maximum-frame-rate).
 
 ---
 

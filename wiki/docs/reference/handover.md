@@ -91,7 +91,7 @@ Things that are easy to get wrong and expensive to rediscover:
 6. **H.264 is risky for tracking.** Inter-frame compression puts artefacts
    exactly on moving subjects. Validate before committing an experiment to it.
 
-7. **Recalibrate write speed after any SD card swap.** Otherwise the headroom
+7. **Recalibrate write speed after any SD card swap.** Otherwise the SD card
    estimates describe a card that is no longer present.
 
 8. **Watch queue depth, not just dropped frames.** It rises before frames are
@@ -116,7 +116,7 @@ Things that are easy to get wrong and expensive to rediscover:
 
 **Working:** the recorder app in full — preview with zoom and pan, four
 formats, greyscale and colour, metadata sidecars, profiles, CSV metadata lists
-with automatic advance, write-speed benchmarking and headroom estimates.
+with automatic advance, measured per-format maximum frame rates.
 
 **Not built yet:**
 

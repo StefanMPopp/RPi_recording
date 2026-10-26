@@ -67,7 +67,11 @@ def build_metadata(settings, capture_summary: dict) -> dict:
             "entered_as":      metadata_dict.get("scale_entered_as"),
         },
         "output": {
-            "format":      settings.format_label,
+            "format":      settings.output_format.label,
+            "format_key":  settings.output_format.key,
+            # Set when the writer fell back to another encoder; for H.264 this
+            # can mean the file is actually MPEG-4 Part 2.
+            "writer_note": capture_summary.get("writer_note"),
             "file_name":   settings.file_name,
             # The order metadata fields were in when the name was built —
             # lets a reader reconstruct which part of the name is which.

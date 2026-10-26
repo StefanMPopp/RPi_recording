@@ -181,7 +181,7 @@ Check:
 - [ ] The preview shows a live image
 - [ ] The sensor mode dropdown lists the IMX477 modes
 - [ ] **Settings → Recalibrate write speed** completes and gives a plausible
-      figure (20–90 MB/s for a U30 card)
+      figure (roughly 20–45 MB/s on a Pi 4's SD slot)
 - [ ] A 10-second test recording produces a file and a metadata file, with no
       dropped frames
 

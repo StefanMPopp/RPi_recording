@@ -19,8 +19,10 @@ During recording the right panel switches to a live status view.
 
 from __future__ import annotations
 
+import html
 import os      # only for os.access — pathlib has no equivalent
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore    import Qt, QTimer, pyqtSignal, QThread, QPoint, QSize
@@ -40,18 +42,19 @@ from constants  import (
     APP_NAME, APP_VERSION, DEFAULT_SAVE_DIR,
     FILENAME_FIELDS, DEFAULT_FIELD_ORDER,
     PREVIEW_WIDTH,
-    OUTPUT_FORMATS, METADATA_DEFAULTS,
+    METADATA_DEFAULTS,
     COLOUR_MODES, DEFAULT_COLOUR_MODE,
 )
 from config     import load_app_config, save_app_config, load_profile, save_profile, default_profile
-from benchmark  import (
-    get_free_space_gb, compute_headroom, compute_max_record_time_s,
-    estimate_file_size_per_minute_gb,
-)
+from benchmark  import get_free_space_gb
 from camera     import make_camera, SensorMode
-from record     import RecordingSession, RecordingSettings
+from record     import (RecordingSession, RecordingSettings,
+                        measure_format_throughput, capacity_for,
+                        throughput_cache_key, h264_encoder_note)
 from metadata   import build_metadata, write_metadata
 from metadata_list import load_metadata_list, build_auto_file_name, MetadataRow
+import formats
+from formats    import OUTPUT_FORMATS, DEFAULT_FORMAT, OutputFormat, find_format
 
 
 # =============================================================================
@@ -692,125 +695,76 @@ class PreviewWidget(QLabel):
 
 
 # =============================================================================
-# Format tooltip builder — single table covering all formats
+# Capacity table — measured max fps and recording time, one row per format
 # =============================================================================
 
-def _build_all_formats_tooltip(
-    sensor_mode: SensorMode | None,
-    selected_fps: float,
-    channels: int,
-    write_speed_mbs: float | None,
-    free_space_gb: float | None,
-) -> str:
+LIMIT_NAMES = {"camera": "camera", "encoding": "encoding", "SD card": "SD card"}
+
+
+def _format_minutes(minutes) -> str:
+    if minutes is None:
+        return "—"
+    if minutes >= 120:
+        return f"{minutes / 60:.1f} h"
+    return f"{minutes:.0f} min"
+
+
+def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
+                          measurements: dict, write_speed_mbs,
+                          free_space_gb) -> str:
     """
-    Build a monospace table covering all output formats at the
-    currently selected resolution and framerate.
-    Columns: Format | Description | Write rate | Size/min | Headroom | Max time
+    One table for the current resolution and colour mode: for every format,
+    the highest frame rate it can sustain, what stops it going faster, and how
+    long a recording fits on the card.
+
+    `measurements` maps format key -> stored measurement (or is missing the
+    key if that format has not been measured). Everything shown comes from
+    measurements on this machine; nothing is estimated.
     """
-    # ── Column widths ──────────────────────────────────────────────────────────
-    W_FMT  = 22   # format name
-    W_DESC = 38   # short description
-    W_RATE = 12   # write rate
-    W_SIZE = 11   # size per min
-    W_HEAD = 10   # headroom
-    W_TIME = 10   # max time
+    colour_name = "greyscale" if channels == 1 else "colour"
+    heading = (f"Measured capacity — {sensor_mode.width}×{sensor_mode.height}, "
+               f"{colour_name}")
 
-    header = (
-        f"{'Format':<{W_FMT}}"
-        f"{'Description':<{W_DESC}}"
-        f"{'Write rate':>{W_RATE}}"
-        f"{'Size/min':>{W_SIZE}}"
-        f"{'Headroom':>{W_HEAD}}"
-        f"{'Max time':>{W_TIME}}"
-    )
-    separator = "─" * (W_FMT + W_DESC + W_RATE + W_SIZE + W_HEAD + W_TIME)
+    if not measurements:
+        return (f"{heading}\n\n"
+                f"Not measured yet for this resolution and colour mode.\n"
+                f"Settings → Measure maximum fps  (about 25 s)")
 
-    if sensor_mode is not None:
-        colour_name = "greyscale" if channels == 1 else "colour"
-        heading = (
-            f"Output format comparison  —  {sensor_mode.width}×{sensor_mode.height} "
-            f"@ {selected_fps:.1f} fps, {colour_name}"
-        )
-    else:
-        heading = "Output format comparison"
+    widths = (20, 9, 12, 10, 14)
+    header = (f"{'Format':<{widths[0]}}{'Max fps':>{widths[1]}}"
+              f"{'Limited by':>{widths[2]}}{'MB/frame':>{widths[3]}}"
+              f"{'Fits on card':>{widths[4]}}")
+    rule = "─" * sum(widths)
+    lines = [heading, rule, header, rule]
 
-    lines = [
-        heading,
-        separator,
-        header,
-        separator,
-    ]
-
-    # Short descriptions — one per format, matched by display_label
-    DESCRIPTIONS = {
-        "MJPEG video (.avi)": "Each frame compressed independently",
-        "TIFF image stack":   "Uncompressed",
-        "PNG image stack":    "Lossless compressed images",
-        "H.264 video (.mp4)": "Inter-frame compr.: fast moves blur?",
-    }
-
-    icon = {"green": "✔", "amber": "⚠", "red": "✖"}
-
-    if sensor_mode is None or write_speed_mbs is None:
-        for display_label, _ext, _ in OUTPUT_FORMATS:
-            desc = DESCRIPTIONS.get(display_label, "")
-            lines.append(
-                f"{display_label:<{W_FMT}}"
-                f"{desc:<{W_DESC}}"
-                f"{'—':>{W_RATE}}"
-                f"{'—':>{W_SIZE}}"
-                f"{'—':>{W_HEAD}}"
-                f"{'—':>{W_TIME}}"
-            )
-    else:
-        for display_label, _ext, _ in OUTPUT_FORMATS:
-            desc         = DESCRIPTIONS.get(display_label, "")
-            headroom     = compute_headroom(
-                display_label, sensor_mode.width, sensor_mode.height,
-                selected_fps, write_speed_mbs, channels,
-            )
-            size_per_min = estimate_file_size_per_minute_gb(
-                display_label, sensor_mode.width, sensor_mode.height,
-                selected_fps, channels,
-            )
-            max_time_str = "—"
-            if free_space_gb is not None:
-                max_time_s = compute_max_record_time_s(
-                    display_label, sensor_mode.width, sensor_mode.height,
-                    selected_fps, free_space_gb, channels,
-                )
-                if max_time_s is not None:
-                    max_time_str = f"{max_time_s / 60:.0f} min"
-
-            headroom_str = f"{headroom['headroom_pct']:.0f}% {icon[headroom['colour']]}"
-            rate_str     = f"{headroom['write_rate_mbs']:.1f} MB/s"
-            size_str     = f"{size_per_min:.2f} GB"
-
-            lines.append(
-                f"{display_label:<{W_FMT}}"
-                f"{desc:<{W_DESC}}"
-                f"{rate_str:>{W_RATE}}"
-                f"{size_str:>{W_SIZE}}"
-                f"{headroom_str:>{W_HEAD}}"
-                f"{max_time_str:>{W_TIME}}"
-            )
-
-    lines.append(separator)
-    if free_space_gb is not None and write_speed_mbs is not None:
+    for output_format in OUTPUT_FORMATS:
+        label = output_format.label
+        measurement = measurements.get(output_format.key)
+        if measurement is None:
+            lines.append(f"{label:<{widths[0]}}{'not measured':>{widths[1] + widths[2]}}")
+            continue
+        capacity = capacity_for(measurement, write_speed_mbs, free_space_gb, selected_fps)
         lines.append(
-            f"Free: {free_space_gb:.1f} GB    "
-            f"Write speed: {write_speed_mbs:.1f} MB/s    "
-            f"Recalibrate: Settings → Recalibrate write speed"
+            f"{label:<{widths[0]}}"
+            f"{capacity['max_fps']:>{widths[1]}.1f}"
+            f"{LIMIT_NAMES.get(capacity['limit'], capacity['limit']):>{widths[2]}}"
+            f"{capacity['mb_per_frame']:>{widths[3]}.1f}"
+            f"{_format_minutes(capacity['minutes']):>{widths[4]}}"
         )
-    else:
-        lines.append("Calibrate write speed: Settings → Recalibrate write speed")
 
+    lines.append(rule)
+    dates = sorted({m.get("measured_on", "?") for m in measurements.values()})
+    lines.append(f"Recording time at {selected_fps:.1f} fps (or the max, if lower). "
+                 f"Measured {', '.join(dates)}.")
+    if write_speed_mbs:
+        lines.append(f"Card: {free_space_gb or 0:.1f} GB free, writes "
+                     f"{write_speed_mbs:.0f} MB/s (85% of that counted as usable).")
+    else:
+        lines.append("SD card speed not measured, so it is not counted as a limit "
+                     "— Settings → Recalibrate write speed.")
+    lines.append(f"H.264 here: {h264_encoder_note(sensor_mode.width, sensor_mode.height, channels)}")
     return "\n".join(lines)
 
-
-# =============================================================================
-# Main window
-# =============================================================================
 
 class MainWindow(QMainWindow):
 
@@ -883,6 +837,10 @@ class MainWindow(QMainWindow):
         benchmark_action = QAction("Recalibrate write speed…", self)
         benchmark_action.triggered.connect(self._on_recalibrate_write_speed)
         settings_menu.addAction(benchmark_action)
+
+        measure_fps_action = QAction("Measure maximum fps for current settings…", self)
+        measure_fps_action.triggered.connect(self._on_measure_max_fps)
+        settings_menu.addAction(measure_fps_action)
 
         settings_menu.addSeparator()
 
@@ -1138,8 +1096,12 @@ class MainWindow(QMainWindow):
         self._format_combo   = QComboBox()
         self._format_combo.setMaxVisibleItems(len(OUTPUT_FORMATS))
         self._format_combo.setFixedWidth(160)
-        for display_label, _, _ in OUTPUT_FORMATS:
-            self._format_combo.addItem(display_label)
+        for output_format in OUTPUT_FORMATS:
+            self._format_combo.addItem(output_format.label, output_format.key)
+            self._format_combo.setItemData(
+                self._format_combo.count() - 1, output_format.description,
+                Qt.ItemDataRole.ToolTipRole,
+            )
         self._format_combo.currentIndexChanged.connect(self._on_format_changed)
         self._format_info_btn = InfoButton()
         format_row.addWidget(self._format_combo)
@@ -1148,25 +1110,11 @@ class MainWindow(QMainWindow):
         layout.addLayout(format_row, row, 1)
         row += 1
 
-        # Headroom indicator (updates live) + ℹ explaining what headroom means
-        headroom_row = QHBoxLayout()
-        headroom_row.setSpacing(4)
+        # One-line summary for the SELECTED format; the full table is in the ⓘ
         self._headroom_label = QLabel("")
         self._headroom_label.setStyleSheet("font-size: 12px;")
-        self._headroom_info_btn = InfoButton(
-            "Write headroom is the fraction of your SD card's sustained write\n"
-            "speed that is NOT used by the recording.\n\n"
-            "Example: 30% headroom means the recording uses 70% of the card's\n"
-            "write budget. At 0% the card can't keep up and frames are dropped.\n\n"
-            "✔  > 30% — safe\n"
-            "⚠  10–30% — marginal, frame drops possible under load\n"
-            "✖  < 10% — expect frame drops\n\n"
-            "Recalibrate under Settings if results seem off."
-        )
-        headroom_row.addWidget(self._headroom_label)
-        headroom_row.addWidget(self._headroom_info_btn)
-        headroom_row.addStretch()
-        layout.addLayout(headroom_row, row, 0, 1, 2)
+        self._headroom_label.setWordWrap(True)
+        layout.addWidget(self._headroom_label, row, 0, 1, 2)
         row += 1
 
         # File name — auto-generated from metadata unless overridden
@@ -1197,14 +1145,6 @@ class MainWindow(QMainWindow):
         self._file_name_edit = QLineEdit(self._profile["recording"]["base_name"])
         self._file_name_edit.setMinimumWidth(120)
         layout.addWidget(self._file_name_edit, row, 1)
-        row += 1
-
-        # Folder name (image stack mode only)
-        self._folder_name_label = self._dim_label("Folder name")
-        layout.addWidget(self._folder_name_label, row, 0)
-        self._folder_name_edit = QLineEdit(self._profile["recording"]["folder_name"])
-        self._folder_name_edit.setMinimumWidth(120)
-        layout.addWidget(self._folder_name_edit, row, 1)
         row += 1
 
         # Duration — checkbox on its own row, spinbox below
@@ -1595,42 +1535,57 @@ class MainWindow(QMainWindow):
 
     def _refresh_headroom(self) -> None:
         """
-        Update the inline headroom indicator for the selected format and
-        push the all-formats comparison table to the format ℹ button.
-        Uses the user-selected framerate, not the sensor mode maximum.
+        Update the capacity table (format ⓘ) and the one-line summary under
+        the format selector.
+
+        Shows only measured figures. The earlier byte-count estimate is gone:
+        it assumed the SD card was always the limit, while at high resolution
+        the camera or the encoder usually is — which no estimate can predict.
         """
-        write_speed   = self._app_config["hardware"].get("sd_write_speed_mbs")
-        mode          = self._current_sensor_mode()
-        selected_fps  = self._fps_spin.value()
-        channels      = self._current_channels()
-        format_idx    = self._format_combo.currentIndex()
-        format_label, _, _ = OUTPUT_FORMATS[format_idx]
+        mode         = self._current_sensor_mode()
+        selected_fps = self._fps_spin.value()
+        channels     = self._current_channels()
+        write_speed  = self._app_config["hardware"].get("sd_write_speed_mbs")
+        measurements = self._measurements_for(mode, channels)
 
-        # Update the ℹ popup with the full comparison table
-        table_text = _build_all_formats_tooltip(
-            mode, selected_fps, channels, write_speed, self._free_space_gb,
-        )
-        self._format_info_btn.set_text(table_text)
+        self._format_info_btn.set_text(_build_capacity_table(
+            mode, channels, selected_fps, measurements, write_speed,
+            self._free_space_gb,
+        ))
 
-        # Inline headroom for the currently selected format only
-        if write_speed:
-            headroom = compute_headroom(
-                format_label, mode.width, mode.height, selected_fps,
-                write_speed, channels,
-            )
-            colour = {
-                "green": COLOUR["green"],
-                "amber": COLOUR["amber"],
-                "red":   COLOUR["red"],
-            }[headroom["colour"]]
-            icon = {"green": "✔", "amber": "⚠", "red": "✖"}[headroom["colour"]]
+        measurement  = measurements.get(self._current_format().key)
+        if measurement is None:
             self._headroom_label.setText(
-                f"Write headroom: {headroom['headroom_pct']:.0f}%  {icon}"
+                "Max fps not measured for these settings — Settings → Measure maximum fps"
             )
-            self._headroom_label.setStyleSheet(f"color: {colour}; font-size: 12px;")
-        else:
-            self._headroom_label.setText("Write speed not calibrated")
             self._headroom_label.setStyleSheet(f"color: {COLOUR['text_dim']}; font-size: 12px;")
+            return
+
+        capacity = capacity_for(measurement, write_speed, self._free_space_gb, selected_fps)
+        fits     = _format_minutes(capacity["minutes"])
+        if selected_fps > capacity["max_fps"] * 1.02:
+            colour = COLOUR["red"]
+            text = (f"✖ {selected_fps:.1f} fps is above the max of {capacity['max_fps']:.1f} "
+                    f"(limited by {capacity['limit']}) — frames will be missed or dropped")
+        else:
+            colour = COLOUR["green"]
+            text = (f"✔ Max {capacity['max_fps']:.1f} fps (limited by {capacity['limit']}) · "
+                    f"{fits} fits on the card")
+        self._headroom_label.setText(text)
+        self._headroom_label.setStyleSheet(f"color: {colour}; font-size: 12px;")
+
+    def _measurements_for(self, mode, channels: int) -> dict:
+        """Stored measurements, by format key, at this resolution and colour mode."""
+        store = self._app_config.get("throughput", {}) or {}
+        found = {}
+        for output_format in OUTPUT_FORMATS:
+            key = throughput_cache_key(mode.width, mode.height, channels, output_format)
+            if key in store and "pipeline_fps" in store[key]:
+                found[output_format.key] = store[key]
+        return found
+
+    def _current_format(self) -> OutputFormat:
+        return find_format(self._format_combo.currentData()) or DEFAULT_FORMAT
 
     # =========================================================================
     # Slots
@@ -1798,20 +1753,13 @@ class MainWindow(QMainWindow):
 
     def _on_format_changed(self, _index: int) -> None:
         self._refresh_headroom()
-        # Folder name applies to image stacks only; file name to both
-        format_label   = self._format_combo.currentText()
-        is_image_stack = "stack" in format_label.lower()
-        self._folder_name_edit.setEnabled(is_image_stack)
-        self._folder_name_label.setEnabled(is_image_stack)
-        if is_image_stack:
-            self._folder_name_edit.setToolTip(
-                "Images are written into this folder, named "
-                "{file name}_00001.tiff, _00002.tiff, and so on."
+        if self._current_format().is_image_stack:
+            self._file_name_edit.setToolTip(
+                "Image stacks go into a folder of this name, as "
+                "{file name}_00001, _00002, and so on."
             )
         else:
-            self._folder_name_edit.setToolTip(
-                "Only used for image stacks — video formats write a single file."
-            )
+            self._file_name_edit.setToolTip("Name of the video file, without extension.")
 
     def _on_preview_toggle(self, state: int) -> None:
         if state == Qt.CheckState.Checked.value:
@@ -1863,8 +1811,7 @@ class MainWindow(QMainWindow):
         return RecordingSettings(
             save_dir     = Path(self._save_dir_edit.text()),
             file_name    = self._file_name_edit.text().strip() or "recording",
-            folder_name  = self._folder_name_edit.text().strip() or "images",
-            format_label = self._format_combo.currentText(),
+            output_format = self._current_format(),
             frame_width  = mode.width,
             frame_height = mode.height,
             fps          = self._fps_spin.value(),
@@ -1953,6 +1900,13 @@ class MainWindow(QMainWindow):
                 pass
             return
 
+        # Tell the user if the writer had to fall back to a slower path,
+        # rather than letting the recording quietly run at a fraction of the
+        # expected rate.
+        fallback_reason = self._session.writer_note
+        if fallback_reason:
+            self._bottom_status.setText(f"Note: {fallback_reason}")
+
         self._recording_settings = settings
         self._is_recording       = True
 
@@ -2003,7 +1957,20 @@ class MainWindow(QMainWindow):
         self._status_timer.stop()
         self._is_finishing = False
 
-        capture_summary = self._session.finalize() if self._session else {}
+        # finalize() closes the writer, which is where a deferred encoding
+        # error surfaces — the image-stack writer, for example, encodes on
+        # worker threads and can only report failures once they are joined.
+        # Uncaught here the exception would escape into the Qt timer callback:
+        # nothing shown, no metadata written, UI stuck mid-recording. That
+        # looks exactly like "the recording silently produced nothing".
+        capture_summary = {}
+        finalize_error = None
+        if self._session is not None:
+            try:
+                capture_summary = self._session.finalize()
+            except Exception as error:
+                finalize_error = error
+                capture_summary = {"error": str(error)}
 
         # ── Write the metadata sidecar ─────────────────────────────────────────
         if self._recording_settings is not None:
@@ -2053,7 +2020,16 @@ class MainWindow(QMainWindow):
                 f"until this warning stops appearing."
             )
 
-        if capture_summary.get("error"):
+        if finalize_error is not None:
+            QMessageBox.critical(
+                self, "Recording failed while saving",
+                f"Frames were captured but saving them failed:\n\n"
+                f"{finalize_error}\n\n"
+                f"Check free disk space and that the save directory is "
+                f"writable. Any frames already written are in:\n"
+                f"{self._recording_settings.output_dir if self._recording_settings else '?'}"
+            )
+        elif capture_summary.get("error"):
             QMessageBox.critical(
                 self, "Recording error",
                 f"The recording stopped because of an error:\n\n"
@@ -2136,7 +2112,8 @@ class MainWindow(QMainWindow):
                 self._elapsed_label.setStyleSheet(f"color: {COLOUR['accent']};")
 
         # Queue depth is the live indicator of whether the disk is keeping up
-        queue_pct = min(100, int(100 * stats.queue_depth / 60))
+        queue_pct = min(100, int(100 * stats.queue_depth
+                                 / max(1, self._session.queue_capacity)))
         self._headroom_live_label.setText(f"queue {queue_pct:3d}% full")
         if queue_pct > 80:
             queue_colour = COLOUR["red"]
@@ -2200,7 +2177,7 @@ class MainWindow(QMainWindow):
             suggestions.append("switch to Greyscale (~3× less data)")
         if self._fps_spin.value() > 5:
             suggestions.append("lower the framerate")
-        if self._format_combo.currentText() != "H.264 video (.mp4)":
+        if self._current_format() is not formats.H264:
             suggestions.append("use H.264 (much smaller, though less ideal for tracking)")
         suggestions.append("choose a lower resolution")
 
@@ -2281,7 +2258,127 @@ class MainWindow(QMainWindow):
                 self, "Could not save profile", str(save_error)
             )
 
+    def _on_measure_max_fps(self) -> None:
+        """
+        Measure every format at the current resolution and colour mode, then
+        show the capacity table.
+
+        Each format is recorded flat out for a few seconds using the real
+        recording machinery (see record.measure_format_throughput). The SD
+        card's speed is measured first if it has not been, since it caps the
+        formats with large frames.
+        """
+        from PyQt6.QtWidgets import QMessageBox, QProgressDialog
+
+        if self._is_recording or self._is_finishing:
+            QMessageBox.information(self, "Recording in progress",
+                                    "Stop the current recording before measuring.")
+            return
+        try:
+            settings = self._collect_recording_settings()
+        except Exception as settings_error:
+            QMessageBox.warning(self, "Cannot measure", str(settings_error))
+            return
+
+        mode        = self._current_sensor_mode()
+        colour_name = "greyscale" if settings.channels == 1 else "colour"
+        needs_card  = not self._app_config["hardware"].get("sd_write_speed_mbs")
+        proceed = QMessageBox.question(
+            self, "Measure maximum fps",
+            f"This records each format flat out for about 5 seconds at\n\n"
+            f"    {mode.width} × {mode.height}, {colour_name}\n\n"
+            f"to find the highest frame rate each can sustain"
+            + (", after measuring\nthe SD card's write speed (another ~15 s)" if needs_card else "")
+            + ".\n\nTest footage goes to a hidden folder in your save directory\n"
+              "and is deleted afterwards.\n\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if proceed != QMessageBox.StandardButton.Yes:
+            return
+
+        if needs_card and not self._measure_card_speed(quiet=True):
+            return
+
+        steps    = len(OUTPUT_FORMATS)
+        progress = QProgressDialog("Measuring…", "Cancel", 0, steps, self)
+        progress.setWindowTitle("Measuring maximum fps")
+        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progress.setMinimumDuration(0)
+
+        def wait_responsively(seconds: float) -> None:
+            # Keeps the window repainting during each format's ~5 s run
+            end_time = time.perf_counter() + seconds
+            while time.perf_counter() < end_time:
+                QApplication.processEvents()
+                time.sleep(0.03)
+
+        self._camera.pause_preview()
+        results, failures = {}, {}
+        try:
+            for step, output_format in enumerate(OUTPUT_FORMATS):
+                if progress.wasCanceled():
+                    break
+                progress.setLabelText(
+                    f"Measuring {output_format.label}  ({step + 1} of {steps})…"
+                )
+                progress.setValue(step)
+                QApplication.processEvents()
+                format_settings = replace(settings, output_format=output_format)
+                try:
+                    results[output_format] = measure_format_throughput(
+                        self._camera, format_settings, mode.max_fps,
+                        wait=wait_responsively,
+                    )
+                except Exception as measure_error:
+                    failures[output_format.label] = str(measure_error)[:300]
+            progress.setValue(steps)
+        finally:
+            if self._show_preview_check.isChecked():
+                try:
+                    self._camera.resume_preview()
+                except Exception:
+                    pass
+
+        store = self._app_config.setdefault("throughput", {})
+        for output_format, measurement in results.items():
+            key = throughput_cache_key(mode.width, mode.height, settings.channels, output_format)
+            store[key] = measurement
+        if results:
+            save_app_config(self._app_config)
+
+        self._refresh_free_space()
+        self._refresh_headroom()
+
+        table = self._format_info_btn._popup_text
+        report = QMessageBox(self)
+        report.setWindowTitle("Measurement complete" if not failures else "Measurement finished with errors")
+        report.setTextFormat(Qt.TextFormat.RichText)
+        failure_text = "".join(
+            f"<p><b>{html.escape(label)}</b> could not be measured: "
+            f"{html.escape(error)}</p>" for label, error in failures.items()
+        )
+        report.setText(f"<pre>{html.escape(table)}</pre>{failure_text}")
+        report.exec()
+        self._bottom_status.setText(
+            f"Measured {len(results)} of {steps} formats at "
+            f"{mode.width}×{mode.height}, {colour_name}"
+        )
+
     def _on_recalibrate_write_speed(self) -> None:
+        if self._measure_card_speed(quiet=False):
+            self._bottom_status.setText(
+                f"Write speed: "
+                f"{self._app_config['hardware']['sd_write_speed_mbs']:.1f} MB/s "
+                f"(calibrated today)"
+            )
+
+    def _measure_card_speed(self, quiet: bool) -> bool:
+        """
+        Measure the card's sustained write speed and store it. Returns True on
+        success. Problems are always reported in a dialog; `quiet` only
+        suppresses the status-bar message, for use inside the fps measurement.
+        """
         from benchmark import measure_write_speed_mbs
         from PyQt6.QtWidgets import QMessageBox
 
@@ -2295,20 +2392,20 @@ class MainWindow(QMainWindow):
                     self, "Save directory not found",
                     f"This directory does not exist:\n{save_dir}"
                 )
-                return
+                return False
             if not os.access(save_dir, os.W_OK):
                 QMessageBox.warning(
                     self, "Save directory not writable",
                     f"You do not have permission to write to:\n{save_dir}\n\n"
                     f"Choose a directory inside your own home folder."
                 )
-                return
+                return False
         except OSError as path_error:
             QMessageBox.warning(self, "Save directory unusable", str(path_error))
-            return
+            return False
 
         self._bottom_status.setText(
-            "Measuring write speed… (writes a 400 MB test file, ~15 s)"
+            "Measuring SD card write speed… (400 MB test file, 10–20 s)"
         )
         QApplication.processEvents()
 
@@ -2321,7 +2418,7 @@ class MainWindow(QMainWindow):
                 f"The disk may be full — the test needs 400 MB free."
             )
             self._bottom_status.setText("Write speed test failed")
-            return
+            return False
 
         from datetime import date
         self._app_config["hardware"]["sd_write_speed_mbs"] = write_speed_mbs
@@ -2329,9 +2426,7 @@ class MainWindow(QMainWindow):
         save_app_config(self._app_config)
         self._refresh_free_space()
         self._refresh_headroom()
-        self._bottom_status.setText(
-            f"Write speed: {write_speed_mbs:.1f} MB/s  (calibrated today)"
-        )
+        return True
 
     # =========================================================================
     # Profile helpers
@@ -2341,11 +2436,10 @@ class MainWindow(QMainWindow):
         return {
             "recording": {
                 "save_dir":      self._save_dir_edit.text(),
-                "output_format": self._format_combo.currentText(),
+                "output_format": self._current_format().key,
                 "duration_s":    None if self._duration_check.isChecked() else self._duration_spin.value(),
                 "base_name":      self._file_name_edit.text(),
                 "auto_file_name": self._auto_name_check.isChecked(),
-                "folder_name":   self._folder_name_edit.text(),
             },
             "camera": {
                 "sensor_mode": self._sensor_mode_combo.currentIndex(),
@@ -2371,15 +2465,15 @@ class MainWindow(QMainWindow):
         cam  = self._profile.get("camera",    {})
 
         if "save_dir"      in rec: self._save_dir_edit.setText(rec["save_dir"])
-        if "output_format" in rec:
-            index = self._format_combo.findText(rec["output_format"])
+        saved_format = find_format(rec.get("output_format"))
+        if saved_format is not None:
+            index = self._format_combo.findData(saved_format.key)
             if index >= 0:
                 self._format_combo.setCurrentIndex(index)
         if "auto_file_name" in rec:
             self._auto_name_check.setChecked(bool(rec["auto_file_name"]))
         if "base_name" in rec and not self._auto_name_check.isChecked():
             self._file_name_edit.setText(rec["base_name"])
-        if "folder_name"   in rec: self._folder_name_edit.setText(rec["folder_name"])
         if "duration_s"    in rec:
             if rec["duration_s"] is None:
                 self._duration_check.setChecked(True)
@@ -2640,11 +2734,9 @@ class MainWindow(QMainWindow):
 
         save_dir      = Path(self._save_dir_edit.text())
         include_names = self._app_config["app"].get("include_treatment_names", False)
-        format_label  = self._format_combo.currentText()
-        is_stack      = "stack" in format_label.lower()
-        extension     = next(
-            (ext for label, ext, _ in OUTPUT_FORMATS if label == format_label), ".avi"
-        )
+        output_format = self._current_format()
+        is_stack      = output_format.is_image_stack
+        extension     = output_format.extension
 
         current_index = self._list_combo.currentIndex()
         self._list_combo.blockSignals(True)

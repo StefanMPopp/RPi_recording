@@ -28,7 +28,7 @@ If the ring is fitted:
 
 The SD card cannot write as fast as the camera produces data. The warning panel
 lists fixes in order of effectiveness; see
-[write headroom](choosing_settings.md#write-headroom).
+[maximum frame rate](choosing_settings.md#maximum-frame-rate).
 
 Quickest wins: greyscale, then lower framerate.
 

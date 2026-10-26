@@ -50,14 +50,16 @@ some CPU; disabling it frees that for encoding.
 
 **Save to** — the output folder. The folder icon opens a browser.
 
-**Format** — the file format. Hover the blue ⓘ for a comparison table showing
-write rate, file size per minute, write headroom and maximum recording time for
-every format at your current settings. See
-[file formats](../reference/file_formats.md).
+**Format** — the file format. Hover the blue ⓘ for the measured capacity table:
+for every format at the current resolution and colour mode, the maximum frame
+rate, what limits it (camera, encoding or SD card), megabytes per frame, and how
+long a recording fits on the card. Empty until you run
+**Settings → Measure maximum fps**. See
+[maximum frame rate](choosing_settings.md#maximum-frame-rate).
 
-**Write headroom** — how much of the SD card's write speed is left unused.
-Green is comfortable, amber is marginal, red means frames will be dropped.
-Hover its ⓘ for the thresholds.
+The line below the selector summarises the chosen format — its maximum and how
+long fits on the card — and turns red if the selected frame rate is above that
+maximum.
 
 **Name from metadata** — when ticked (the default), the file name is built
 automatically as:
@@ -79,9 +81,7 @@ Whether treatment *names* appear alongside their values is set under
 | On | `foraging_density-high-light-dim_1` |
 
 **File name** — the name without extension. Read-only while auto-naming is on.
-
-**Folder name** — only used for image stacks, where images go into their own
-folder. Greyed out for video formats.
+For image stacks it is also the name of the folder the images go into.
 
 **Duration** — tick **Record until stopped** to end manually, or untick and set
 a number of seconds for the recording to stop itself.
@@ -147,10 +147,15 @@ Press ++q++ or click **Stop recording** to finish.
 
 **File → Load profile / Save profile** — same as the buttons.
 
+**Settings → Measure maximum fps for current settings** — records each format
+flat out for a few seconds (about 25 s in total) and fills the capacity table
+for the current resolution and colour mode. Test footage goes to a hidden folder
+in the save directory and is deleted.
+
 **Settings → Recalibrate write speed** — measures the SD card's sustained write
-speed by writing a 400 MB test file, taking about 15 seconds. Run this when
-using a new SD card, or if the headroom figures look wrong. The result is stored
-so it does not need repeating.
+speed by writing a 400 MB test file and forcing it onto the card, taking 10–20
+seconds. Run it when using a new card. The first fps measurement runs it
+automatically if it has never been done. The result is stored per Pi.
 
 **Settings → Include treatment names in file name** — the naming style toggle
 described above.

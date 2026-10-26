@@ -70,7 +70,7 @@ well-meaning person fixing something in the field.
 
 **Working:** the recorder app — preview with zoom and pan, all four formats,
 greyscale and colour, metadata sidecars, profiles, metadata lists with
-automatic advance, write-speed benchmarking and headroom estimates.
+automatic advance, measured per-format maximum frame rates.
 
 **Not yet built:**
 

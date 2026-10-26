@@ -12,9 +12,10 @@
 | `record.py` | The capture engine: threads, queue, per-format writers. |
 | `metadata.py` | Builds and writes the metadata sidecar. |
 | `metadata_list.py` | Reads metadata CSVs; builds automatic file names. |
-| `benchmark.py` | Measures write speed; estimates data rates and headroom. |
+| `benchmark.py` | Measures the SD card's sustained write speed and free space. |
 | `config.py` | YAML load/save for app config and profiles. |
 | `constants.py` | Every tuneable value in one place. |
+| `formats.py` | The output formats, each with a stable key used by code and profiles. |
 
 Dependencies run one way: `main_window` imports the others; they do not import
 it. Everything except `main_window` is testable without Qt.
@@ -112,22 +113,31 @@ being a valid substitute.
 
 ---
 
-## Write speed and headroom
+## Measuring the maximum frame rate
 
-`benchmark.py` measures sustained write speed by writing a 400 MB file — large
-enough to defeat the burst cache and reflect real sustained performance.
+`record.measure_format_throughput()` runs the real recording machinery —
+capture thread, queue, writer thread — flat out for a few seconds per format,
+with the camera set to the sensor mode's maximum rate. Capture and encoding
+overlap in a real recording, so timing them back to back in one loop would
+report roughly 1/(capture + encode) where a recording reaches
+1/max(capture, encode); an earlier version did that and understated the rate
+by up to half.
 
-Headroom is then estimated rather than measured:
+Frames dropped at the queue mean the writer could not keep up (limit:
+**encoding**); otherwise the camera set the pace (limit: **camera**).
 
-```
-write_rate  = base_rate × pixel_scale × fps_scale × greyscale_factor
-headroom    = 1 − (write_rate ÷ (measured_speed × 0.85))
-```
+The SD card is deliberately not measured in that run: a few seconds of writes
+land in the operating system's RAM cache. Instead `record.capacity_for()`
+applies a third cap from the measured bytes per frame and the card's write
+speed, which `benchmark.measure_write_speed_mbs()` measures with `fsync` inside
+the timed region (without it, an earlier version reported 90 MB/s on a Pi 4,
+whose SD slot tops out around 40–50 MB/s). 85% of that speed is counted as
+usable. Keeping the card separate also means recalibrating it, or the card
+filling up, updates the table without re-measuring.
 
-The 0.85 is a safety margin for variance. `base_rate` values in
-`_FORMAT_WRITE_RATES_MBS` are empirical for the IMX477 on a static scene; they
-are estimates, deliberately conservative, and only ever used to guide a choice —
-never to gate a recording.
+Measurements are cached in `config_app.yaml` per resolution, colour mode and
+encoder setting, so changing `PNG_MODE` or `TIFF_COMPRESSION` marks a format as
+unmeasured rather than reusing figures from a different encoder.
 
 ---
 
@@ -135,7 +145,7 @@ never to gate a recording.
 
 | To add… | Change |
 |---|---|
-| An output format | `OUTPUT_FORMATS` in `constants.py`, a writer in `record.py`, a rate in `benchmark.py` |
+| An output format | An `OutputFormat` in `formats.py`, a writer in `record.py` |
 | A metadata field | The UI in `_build_metadata_group`, then `build_metadata()` |
 | A camera control | `camera.py`, exposed via a UI control |
 | A profile setting | `_collect_profile_from_ui` and `_apply_profile_to_ui`, both in `main_window.py` |

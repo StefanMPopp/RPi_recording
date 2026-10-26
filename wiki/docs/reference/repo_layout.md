@@ -9,9 +9,10 @@ RPi_recording/
 │   ├── record.py                 capture engine, writers
 │   ├── metadata.py               metadata sidecar
 │   ├── metadata_list.py          CSV lists, auto file naming
-│   ├── benchmark.py              write speed, headroom
+│   ├── benchmark.py              SD write speed, free space
 │   ├── config.py                 YAML load/save
 │   ├── constants.py              all tuneable values
+│   ├── formats.py                output formats (MJPEG, TIFF, PNG, H.264)
 │   ├── requirements.txt          pip dependencies only
 │   └── example_metadata_list.csv
 │
@@ -49,7 +50,7 @@ Listed in `.gitignore`:
 
 !!! warning "config_app.yaml must stay uncommitted"
     It holds a write speed measured on one specific SD card. Sharing it across
-    rigs would give every Pi wrong headroom estimates, and the wrongness would
+    rigs would give every Pi wrong SD card limits, and the wrongness would
     be invisible until frames started dropping.
 
 ---
