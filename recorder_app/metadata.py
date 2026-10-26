@@ -17,8 +17,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
-
+from config import write_yaml_atomic
 from constants import APP_VERSION
 
 
@@ -114,12 +113,4 @@ def build_metadata(settings, capture_summary: dict) -> dict:
 
 def write_metadata(metadata: dict, metadata_file: Path) -> None:
     """Write the metadata dict to a YAML file, creating parent dirs as needed."""
-    metadata_file.parent.mkdir(parents=True, exist_ok=True)
-    with metadata_file.open("w") as file_handle:
-        yaml.dump(
-            metadata,
-            file_handle,
-            default_flow_style=False,
-            sort_keys=False,
-            allow_unicode=True,
-        )
+    write_yaml_atomic(metadata, metadata_file)

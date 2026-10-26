@@ -50,7 +50,8 @@ from benchmark  import get_free_space_gb
 from camera     import make_camera, SensorMode
 from record     import (RecordingSession, RecordingSettings,
                         measure_format_throughput, capacity_for,
-                        throughput_cache_key, h264_encoder_note)
+                        throughput_cache_key, h264_encoder_note,
+                        remove_previous_stack_frames)
 from metadata   import build_metadata, write_metadata
 from metadata_list import load_metadata_list, build_auto_file_name, MetadataRow
 import formats
@@ -1193,8 +1194,8 @@ class MainWindow(QMainWindow):
             "Load a CSV of planned sessions and step through it between\n"
             "recordings, instead of typing metadata each time.\n\n"
             "COLUMN CONVENTION\n"
-            "  Three column names are reserved:\n"
-            "      experimenter, experiment, trial\n"
+            "  Four column names are reserved:\n"
+            "      experimenter, experiment, ant_id, trial\n"
             "  EVERY OTHER COLUMN IS TREATED AS A TREATMENT — the column\n"
             "  name becomes the treatment name, the cell becomes its value.\n\n"
             "EXAMPLE\n"
@@ -1809,7 +1810,7 @@ class MainWindow(QMainWindow):
         )
 
         return RecordingSettings(
-            save_dir     = Path(self._save_dir_edit.text()),
+            save_dir     = Path(self._save_dir_edit.text()).expanduser(),
             file_name    = self._file_name_edit.text().strip() or "recording",
             output_format = self._current_format(),
             frame_width  = mode.width,
@@ -1861,14 +1862,28 @@ class MainWindow(QMainWindow):
         except OSError:
             target_exists = False
         if target_exists:
+            stack_note = (
+                "\n\nThe frames already in this folder will be deleted first, "
+                "so old and new frames cannot mix." if settings.is_image_stack else ""
+            )
             overwrite = QMessageBox.question(
                 self, "Overwrite existing output?",
-                f"This already exists:\n{target}\n\nOverwrite it?",
+                f"This already exists:\n{target}\n\nOverwrite it?{stack_note}",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if overwrite != QMessageBox.StandardButton.Yes:
                 return
+            if settings.is_image_stack:
+                try:
+                    remove_previous_stack_frames(settings)
+                except OSError as remove_error:
+                    QMessageBox.warning(
+                        self, "Could not remove old frames",
+                        f"The existing frames in\n{target}\ncould not all be "
+                        f"deleted, so the recording was not started:\n\n{remove_error}"
+                    )
+                    return
 
         # ── Start ──────────────────────────────────────────────────────────────
         try:
@@ -2404,13 +2419,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Save directory unusable", str(path_error))
             return False
 
-        self._bottom_status.setText(
-            "Measuring SD card write speed… (400 MB test file, 10–20 s)"
-        )
-        QApplication.processEvents()
-
         try:
-            write_speed_mbs = measure_write_speed_mbs(save_dir)
+            write_speed_mbs = self._run_with_busy_dialog(
+                "Measuring SD card write speed… (400 MB test file, 10–20 s)",
+                measure_write_speed_mbs, save_dir,
+            )
         except OSError as benchmark_error:
             QMessageBox.critical(
                 self, "Write speed test failed",
@@ -2442,7 +2455,7 @@ class MainWindow(QMainWindow):
                 "auto_file_name": self._auto_name_check.isChecked(),
             },
             "camera": {
-                "sensor_mode": self._sensor_mode_combo.currentIndex(),
+                "sensor_mode": "{0.width}x{0.height}".format(self._current_sensor_mode()),
                 "fps":         self._fps_spin.value(),
                 "colour_mode": self._colour_combo.currentText(),
             },
@@ -2507,8 +2520,9 @@ class MainWindow(QMainWindow):
             if meta.get("px_per_cm"):
                 self._px_per_cm_spin.setValue(float(meta["px_per_cm"]))
 
-        if "sensor_mode" in cam and cam["sensor_mode"] is not None:
-            self._sensor_mode_combo.setCurrentIndex(cam["sensor_mode"])
+        mode_index = self._find_saved_sensor_mode(cam.get("sensor_mode"))
+        if mode_index is not None:
+            self._sensor_mode_combo.setCurrentIndex(mode_index)
         # fps must be applied after sensor_mode, since the mode sets the ceiling
         if "fps" in cam and cam["fps"] is not None:
             self._fps_spin.setValue(float(cam["fps"]))
@@ -2520,6 +2534,56 @@ class MainWindow(QMainWindow):
     # =========================================================================
     # Helpers
     # =========================================================================
+
+    def _find_saved_sensor_mode(self, saved) -> int | None:
+        """
+        Index of the sensor mode a profile names, or None if it names none
+        that this camera has. Profiles store the mode as "WIDTHxHEIGHT";
+        a plain integer is read as a position in the mode list, which is how
+        older profiles stored it.
+        """
+        modes = self._camera.sensor_modes
+        if isinstance(saved, str):
+            for index, mode in enumerate(modes):
+                if f"{mode.width}x{mode.height}" == saved:
+                    return index
+            return None
+        if isinstance(saved, int) and 0 <= saved < len(modes):
+            return saved
+        return None
+
+    def _run_with_busy_dialog(self, label: str, function, *args):
+        """
+        Run function(*args) on a worker thread behind a modal busy dialog, so
+        the window keeps repainting. Returns its result or raises its error.
+        """
+        from PyQt6.QtWidgets import QProgressDialog
+        import threading
+
+        outcome = {}
+
+        def run() -> None:
+            try:
+                outcome["result"] = function(*args)
+            except BaseException as error:
+                outcome["error"] = error
+
+        worker = threading.Thread(target=run, daemon=True)
+        worker.start()
+
+        dialog = QProgressDialog(label, None, 0, 0, self)   # no cancel; busy bar
+        dialog.setWindowTitle(APP_NAME)
+        dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dialog.setMinimumDuration(0)
+        dialog.show()
+        while worker.is_alive():
+            QApplication.processEvents()
+            time.sleep(0.03)
+        dialog.close()
+
+        if "error" in outcome:
+            raise outcome["error"]
+        return outcome["result"]
 
     def _dim_label(self, text: str) -> QLabel:
         label = QLabel(text)
@@ -2588,7 +2652,7 @@ class MainWindow(QMainWindow):
                 self, "Could not read metadata list",
                 f"{load_error}\n\n"
                 f"The file needs a header row. Reserved column names are "
-                f"experimenter, experiment and trial; every other column is "
+                f"experimenter, experiment, ant_id and trial; every other column is "
                 f"treated as a treatment."
             )
             return
@@ -2644,9 +2708,12 @@ class MainWindow(QMainWindow):
         self._field_list.set_field_value("experiment", row.experiment)
         self._field_list.set_field_value("ant_id",     row.ant_id)
         self._field_list.set_field_value("trial",      row.trial)
-        self._field_list.set_treatments(row.treatments)
 
-        self._refresh_auto_file_name()
+        # set_treatments appends the new treatments at the end, so restore
+        # the user's row order afterwards (it also refreshes the file name)
+        field_order = self._field_list.get_order()
+        self._field_list.set_treatments(row.treatments)
+        self._apply_field_order(field_order)
 
     def _components_for_row(self, row, field_order: list) -> list:
         """
@@ -2732,7 +2799,7 @@ class MainWindow(QMainWindow):
         if not self._auto_name_check.isChecked():
             return
 
-        save_dir      = Path(self._save_dir_edit.text())
+        save_dir      = Path(self._save_dir_edit.text()).expanduser()
         include_names = self._app_config["app"].get("include_treatment_names", False)
         output_format = self._current_format()
         is_stack      = output_format.is_image_stack

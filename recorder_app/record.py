@@ -28,6 +28,8 @@ Output layout (no dates in filenames — dates live in the metadata):
 from __future__ import annotations
 
 import queue
+import re
+import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
@@ -232,54 +234,6 @@ def image_encode_flags(cv2, extension: str) -> list:
     return []
 
 
-class ImageStackWriter:
-    """
-    Writes each frame as a separate image file in a dedicated folder.
-    Files are named {file_name}_00001.{ext}, incrementing with a 5-digit counter.
-    """
-
-    def __init__(self, settings: RecordingSettings):
-        import cv2
-        self._cv2       = cv2
-        self._settings  = settings
-        self._extension = settings.file_extension
-        settings.output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Confirm an image can actually be written here BEFORE the recording
-        # starts. imwrite reports failure by returning False, and in the
-        # parallel writer that happens on a worker thread — so without this an
-        # unwritable directory or an unsupported format would only be
-        # discovered after a whole recording had run, having produced nothing.
-        probe_file = settings.output_dir / f".write_probe{self._extension}"
-        try:
-            if not cv2.imwrite(str(probe_file), np.zeros((8, 8), dtype=np.uint8)):
-                raise OSError(
-                    f"Cannot write {self._extension} files to "
-                    f"{settings.output_dir}. The format may be unsupported by "
-                    f"this OpenCV build, or the directory may not be writable."
-                )
-        finally:
-            try:
-                probe_file.unlink(missing_ok=True)
-            except OSError:
-                pass
-
-
-    def write(self, frame: np.ndarray, frame_index: int) -> None:
-        # Frame counter is 1-based and zero-padded to 5 digits
-        image_file = (
-            self._settings.output_dir
-            / f"{self._settings.file_name}_{frame_index + 1:05d}{self._extension}"
-        )
-        # Colour frames are already BGR (picamera2's RGB888), as OpenCV expects
-        self._cv2.imwrite(
-            str(image_file), frame, image_encode_flags(self._cv2, self._extension)
-        )
-
-    def close(self) -> None:
-        pass   # nothing to finalise for an image stack
-
-
 # =============================================================================
 # FFmpeg-based video writer — multithreaded MJPEG and hardware H.264
 # =============================================================================
@@ -446,15 +400,24 @@ def h264_encoder_note(width: int, height: int, channels: int = 1) -> str:
     Surfaced in the UI because the difference is large: the hardware encoder
     costs almost no CPU, while the software fallback is slower than MJPEG at
     high resolution — the opposite of what "H.264 is more efficient" suggests.
+
+    Never runs the test encode itself: it takes about a second, and the UI
+    calls this on every settings change. A resolution not yet tested is
+    reported as such; the test runs the first time H.264 is recorded or
+    measured there.
     """
-    if hardware_h264_available(width, height, channels):
-        return "hardware encoder (fast, negligible CPU)"
     if not ENABLE_HARDWARE_H264:
         return "software encoder — hardware encoding disabled in constants.py"
     if width > HARDWARE_H264_MAX_WIDTH or height > HARDWARE_H264_MAX_HEIGHT:
         return (f"software encoder — the Pi's hardware H.264 encoder only "
                 f"handles up to {HARDWARE_H264_MAX_WIDTH}x1080, and this is "
                 f"{width}x{height}. Expect it to be SLOWER than MJPEG here.")
+    tested = _HARDWARE_H264_CACHE.get((width, height, channels))
+    if tested is None:
+        return ("hardware encoder if it passes a test encode, run the first "
+                "time H.264 is recorded or measured here; software otherwise")
+    if tested:
+        return "hardware encoder (fast, negligible CPU)"
     return "software encoder — the hardware encoder failed a test encode here"
 
 
@@ -479,10 +442,8 @@ class FFmpegVideoWriter:
 
       H.264  — `h264_v4l2m2m` runs on the Pi's dedicated encoder block rather
                than the CPU, which is dramatically faster at high resolution.
-               (The previous "H.264" option used OpenCV's `mp4v` fourcc, which
-               is a SOFTWARE MPEG-4 encoder — not hardware, and not actually
-               H.264. That mislabelling is why it performed no better than
-               MJPEG.)
+               (OpenCV's only option on the Pi is the `mp4v` fourcc: a
+               software MPEG-4 Part 2 encoder, not H.264.)
 
     Raw frames are written to ffmpeg's stdin. That write blocks if ffmpeg falls
     behind, which is the correct backpressure: it fills our bounded queue, and
@@ -517,11 +478,14 @@ class FFmpegVideoWriter:
             "-i", "-",                             # read frames from stdin
         ] + encoder_arguments + [str(settings.video_file)]
 
+        # stderr goes to a file rather than a pipe: nothing reads a pipe
+        # during recording, and once its buffer filled ffmpeg would block.
+        self._stderr_file = tempfile.TemporaryFile()
         self._process = subprocess.Popen(
             command,
             stdin  = subprocess.PIPE,
             stdout = subprocess.DEVNULL,
-            stderr = subprocess.PIPE,
+            stderr = self._stderr_file,
         )
         self._command = command
 
@@ -536,11 +500,8 @@ class FFmpegVideoWriter:
         except subprocess.TimeoutExpired:
             pass
         if self._process.poll() is not None:
-            stderr_output = b""
-            if self._process.stderr:
-                stderr_output = self._process.stderr.read() or b""
-            message = ("ffmpeg failed to start:\n"
-                       + stderr_output.decode(errors="replace")[:500])
+            message = "ffmpeg failed to start:\n" + self._stderr_text()
+            self._stderr_file.close()
             if self._used_hardware:
                 disable_hardware_h264(*self._settings_key)
                 raise HardwareEncoderStartError(message)
@@ -581,10 +542,8 @@ class FFmpegVideoWriter:
         try:
             self._process.stdin.write(memoryview(frame).cast("B"))
         except BrokenPipeError:
-            stderr_output = b""
-            if self._process.stderr:
-                stderr_output = self._process.stderr.read() or b""
-            message = stderr_output.decode(errors="replace")[:500]
+            self._process.wait()
+            message = self._stderr_text()
 
             # If the hardware encoder failed despite passing its probe, stop
             # choosing it for this configuration. The next attempt then uses
@@ -612,6 +571,26 @@ class FFmpegVideoWriter:
         except self._subprocess.TimeoutExpired:
             self._process.kill()
             self._process.wait()
+            raise RuntimeError(
+                "ffmpeg did not finish writing the video within 120 s and was "
+                "stopped; the file is probably incomplete."
+            )
+        finally:
+            message = self._stderr_text()
+            self._stderr_file.close()
+        if self._process.returncode != 0:
+            raise RuntimeError(
+                f"ffmpeg exited with code {self._process.returncode} while "
+                f"finishing the video:\n{message}"
+            )
+
+    def _stderr_text(self, limit: int = 500) -> str:
+        """The first `limit` characters ffmpeg wrote to stderr."""
+        try:
+            self._stderr_file.seek(0)
+            return self._stderr_file.read(limit).decode(errors="replace")
+        except (OSError, ValueError):     # ValueError: file already closed
+            return ""
 
 
 # =============================================================================
@@ -667,7 +646,6 @@ class ParallelImageStackWriter:
         # than help.
         self._flags   = image_encode_flags(cv2, self._extension)
         self._pool    = ThreadPoolExecutor(max_workers=worker_count)
-        self._futures = []
         self._error   = None
 
         # ThreadPoolExecutor's queue is unbounded, so submit() always returns
@@ -695,9 +673,7 @@ class ParallelImageStackWriter:
         self._slots.acquire()
         # Frames are handed off by reference; the capture thread never reuses a
         # buffer while it is still in flight, so no copy is needed here.
-        self._futures.append(
-            self._pool.submit(self._write_one, frame, image_file)
-        )
+        self._pool.submit(self._write_one, frame, image_file)
 
     def _encode_flags(self) -> list:
         """Per-format encoder flags; see image_encode_flags."""
@@ -936,6 +912,27 @@ def throughput_cache_key(width: int, height: int, channels: int,
     return f"{width}x{height}_{colour}_{encoder_signature(output_format)}"
 
 
+def remove_previous_stack_frames(settings: RecordingSettings) -> int:
+    """
+    Delete the frames an earlier image stack of the same name left in its
+    folder, so an overwritten stack cannot end up mixing old and new frames.
+
+    Only files named like stack frames of this file name ({file_name}_NNNNN
+    with an image-stack extension) are removed; anything else in the folder
+    is left alone. Returns how many files were removed.
+    """
+    if not settings.output_dir.is_dir():
+        return 0
+    frame_name = re.compile(rf"{re.escape(settings.file_name)}_\d+")
+    extensions = {f.extension for f in formats.OUTPUT_FORMATS if f.is_image_stack}
+    removed = 0
+    for path in settings.output_dir.iterdir():
+        if path.suffix in extensions and frame_name.fullmatch(path.stem) and path.is_file():
+            path.unlink()
+            removed += 1
+    return removed
+
+
 # =============================================================================
 # Writer selection
 # =============================================================================
@@ -955,17 +952,9 @@ def make_writer(settings: RecordingSettings):
     than being told at the time.
     """
     if settings.is_image_stack:
-        try:
-            writer = ParallelImageStackWriter(settings)
-            writer.fallback_reason = None
-            return writer
-        except Exception as parallel_error:
-            writer = ImageStackWriter(settings)
-            writer.fallback_reason = (
-                f"parallel image writing unavailable ({parallel_error}); "
-                f"using the single-threaded writer"
-            )
-            return writer
+        writer = ParallelImageStackWriter(settings)
+        writer.fallback_reason = None
+        return writer
 
     hardware_note = None
     try:
@@ -1099,8 +1088,15 @@ class RecordingSession:
         if self._writer_thread:
             self._writer_thread.join(timeout=60.0)
 
+        # A failure while closing (ffmpeg finishing the container, image
+        # workers reporting a write error) is recorded like any other
+        # recording error, so the summary and frame counts survive it.
         if self._writer:
-            self._writer.close()
+            try:
+                self._writer.close()
+            except Exception as close_error:
+                if self._error is None:
+                    self._error = close_error
 
         actual_duration_s = (
             self._stop_time - self._start_time

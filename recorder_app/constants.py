@@ -16,7 +16,10 @@ APP_VERSION = "0.1.0"
 # it, and 'pi' is no longer the default). A hardcoded path fails on any Pi whose
 # user is named differently.
 DEFAULT_SAVE_DIR      = str(Path.home() / "Projects")
-DEFAULT_CONFIG_PATH   = "config_app.yaml"
+# The app config lives at the repository root, found from this file's location
+# rather than the current directory, so it is the same file however the app
+# is started (desktop launcher, or `python3 main.py` from any directory).
+DEFAULT_CONFIG_PATH   = str(Path(__file__).resolve().parent.parent / "config_app.yaml")
 
 # ── Preview ────────────────────────────────────────────────────────────────────
 PREVIEW_FPS           = 10          # max fps for the live preview stream

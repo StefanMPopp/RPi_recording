@@ -32,7 +32,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-# Columns that are NOT treatments
 # Column names that map to fixed fields rather than becoming treatments.
 # Aliases let spreadsheet headers vary without silently becoming treatments —
 # "Ant ID" and "antid" are the same field as "ant_id".
@@ -103,7 +102,25 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
             key = (name or "").strip().lower()
             return COLUMN_ALIASES.get(key, key)
 
-        column_map = {normalise(name): name for name in reader.fieldnames}
+        # Two headers can mean the same field ("id" and "ant_id"). One is
+        # used and the other ignored, with a warning; the canonical spelling
+        # wins over an alias.
+        column_map: dict[str, str] = {}
+        for name in reader.fieldnames:
+            key = normalise(name)
+            if not key:
+                continue
+            if key in column_map:
+                kept, ignored = column_map[key], name
+                if (name or "").strip().lower() == key:
+                    kept, ignored = name, column_map[key]
+                    column_map[key] = kept
+                warnings.append(
+                    f"Columns '{kept}' and '{ignored}' both mean '{key}'; "
+                    f"using '{kept}' and ignoring '{ignored}'."
+                )
+                continue
+            column_map[key] = name
         treatment_columns = [
             original for normalised, original in column_map.items()
             if normalised not in RESERVED_COLUMNS and normalised
@@ -112,7 +129,7 @@ def load_metadata_list(csv_file: Path) -> tuple[list[MetadataRow], list[str]]:
         if not treatment_columns:
             warnings.append(
                 "No treatment columns found — every column matched a reserved "
-                "name (experimenter, experiment, trial)."
+                "name (experimenter, experiment, ant_id, trial)."
             )
 
         for row_index, raw_row in enumerate(reader, start=1):

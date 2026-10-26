@@ -113,7 +113,9 @@ class PiCamera:
         self._preview_fps       = 10          # display refresh rate of the UI widget
         self._target_fps:  float | None = None   # sensor FrameRate — matches recording fps
         self._preview_channels  = 3           # 1 = greyscale, 3 = colour
-        self._recording_channels: int | None = None   # main stream's current format
+        # Channels the camera is configured to RECORD, or None while it runs
+        # the preview configuration (or is stopped)
+        self._recording_channels: int | None = None
         self._camera_started = False
         # Rotating frame buffers, keyed by shape — see _get_frame_buffer
         self._frame_buffers: dict = {}
@@ -258,10 +260,10 @@ class PiCamera:
         self._camera.configure(preview_config)
         self._camera.start()
         self._camera_started = True
-        # start_preview always configures main as RGB888 (colour), so the
-        # next capture_frame(channels=1, ...) must not assume a YUV420 main
-        # stream is already in place — prepare_for_recording() will fix this.
-        self._recording_channels = 3
+        # This is the preview configuration, not a recording one (fewer
+        # buffers, different noise reduction), so prepare_for_recording()
+        # must reconfigure before any recording, colour included.
+        self._recording_channels = None
 
         # Apply the recording framerate to the sensor if one has been set —
         # this makes exposure/brightness in the preview match what recording
@@ -391,14 +393,13 @@ class PiCamera:
         running beforehand — resuming it is the caller's responsibility, done
         only once recording has fully finished. Auto-resuming here would let
         the preview thread and the recording both consume camera requests at
-        once, exactly the contention that halved the frame rate before this
-        was fixed (see pause_preview).
+        once, which halves the recording rate (see pause_preview).
         """
+        self.pause_preview()
         if channels == self._recording_channels and self._camera_started:
             self._warm_frame_pool(channels)
             return   # already configured correctly; avoid an unneeded restart
 
-        self.pause_preview()
         try:
             self._camera.stop()
         except Exception:
@@ -476,20 +477,22 @@ class PiCamera:
         number of frames that can be in flight, so a buffer is never
         overwritten while a writer still holds it.
         """
-        from constants import FRAME_QUEUE_SIZE
+        from constants import FRAME_QUEUE_SIZE, IMAGE_STACK_WORKERS
 
         key = (shape, np.dtype(dtype).str)
         pool = self._frame_buffers.get(key)
 
         if pool is None:
             frame_bytes = int(np.prod(shape)) * np.dtype(dtype).itemsize
-            # The queue can be FULL while further frames are being captured,
-            # encoded, or held briefly by a writer, so the pool needs real
-            # margin over the queue depth — not just one or two spare buffers.
-            # Sizing it at twice the queue plus a margin was verified against a
-            # test that holds a full queue of frames and keeps capturing; with
-            # a tighter pool that test corrupts most of the held frames.
-            wanted = FRAME_QUEUE_SIZE * 2 + 4
+            # A buffer must not come round again while any frame still
+            # references it. In flight at once: a full queue, the frame the
+            # writer thread holds, the image-stack writer's encode slots
+            # (2 per worker, see ParallelImageStackWriter) and the frame being
+            # captured. The pool covers that plus a margin, and is never
+            # smaller than twice the queue plus a margin, which a test
+            # holding a full queue while capturing showed is needed.
+            in_flight = FRAME_QUEUE_SIZE + 1 + 2 * IMAGE_STACK_WORKERS + 1
+            wanted = max(FRAME_QUEUE_SIZE * 2 + 4, in_flight + 4)
             if frame_bytes * wanted > self._BUFFER_POOL_MAX_BYTES:
                 # Too large to pool safely; fall back to per-frame allocation
                 self._frame_buffers[key] = []
@@ -673,7 +676,7 @@ class StubCamera:
         self._preview_running  = True
         frame_interval         = 1.0 / fps
 
-        mode           = self.sensor_modes[0]
+        mode           = self._active_mode
         preview_width  = PREVIEW_WIDTH
         preview_height = int(preview_width * mode.height / mode.width)
 

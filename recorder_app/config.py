@@ -10,7 +10,10 @@ Config hierarchy:
   3. UI state         — live values in the form; overrides profile on record start
 """
 
+import os
+import tempfile
 from pathlib import Path
+
 import yaml
 
 from constants import (
@@ -28,11 +31,17 @@ def load_app_config(config_file: Path = Path(DEFAULT_CONFIG_PATH)) -> dict:
     Load config_app.yaml. If the file does not exist, return built-in defaults
     so the app can run on first launch before calibration.
     """
+    loaded_config = {}
     if config_file.exists():
-        with config_file.open("r") as file_handle:
-            loaded_config = yaml.safe_load(file_handle) or {}
-    else:
-        loaded_config = {}
+        try:
+            with config_file.open("r") as file_handle:
+                loaded_config = yaml.safe_load(file_handle) or {}
+        except yaml.YAMLError:
+            # Unreadable config: keep it for inspection under another name
+            # and start from defaults, rather than refusing to start.
+            config_file.replace(config_file.with_name(config_file.name + ".corrupt"))
+        if not isinstance(loaded_config, dict):
+            loaded_config = {}
 
     # Merge with defaults so missing keys are always present
     default_config = _default_app_config()
@@ -41,9 +50,7 @@ def load_app_config(config_file: Path = Path(DEFAULT_CONFIG_PATH)) -> dict:
 
 def save_app_config(config: dict, config_file: Path = Path(DEFAULT_CONFIG_PATH)) -> None:
     """Persist the app config to disk."""
-    config_file.parent.mkdir(parents=True, exist_ok=True)
-    with config_file.open("w") as file_handle:
-        yaml.dump(config, file_handle, default_flow_style=False, sort_keys=False)
+    write_yaml_atomic(config, config_file)
 
 
 def _default_app_config() -> dict:
@@ -81,9 +88,7 @@ def load_profile(profile_file: Path) -> dict:
 
 def save_profile(profile: dict, profile_file: Path) -> None:
     """Save the current session parameters to a profile YAML file."""
-    profile_file.parent.mkdir(parents=True, exist_ok=True)
-    with profile_file.open("w") as file_handle:
-        yaml.dump(profile, file_handle, default_flow_style=False, sort_keys=False)
+    write_yaml_atomic(profile, profile_file)
 
 
 def default_profile() -> dict:
@@ -126,3 +131,29 @@ def _deep_merge(base: dict, override: dict) -> dict:
         else:
             merged[key] = override_value
     return merged
+
+
+def write_yaml_atomic(data: dict, target_file: Path) -> None:
+    """
+    Write YAML so that target_file is always either the old or the new
+    version, never a partial one.
+
+    The data goes to a temporary file in the same directory, is flushed to
+    the card, and then replaces the target in one rename. Rigs lose power
+    without warning, and a config truncated mid-write would stop the app
+    from starting.
+    """
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=target_file.parent, prefix=f".{target_file.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(file_descriptor, "w") as file_handle:
+            yaml.dump(data, file_handle, default_flow_style=False,
+                      sort_keys=False, allow_unicode=True)
+            file_handle.flush()
+            os.fsync(file_handle.fileno())
+        os.replace(temporary_name, target_file)
+    except BaseException:
+        Path(temporary_name).unlink(missing_ok=True)
+        raise
