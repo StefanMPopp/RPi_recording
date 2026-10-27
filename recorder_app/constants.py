@@ -8,7 +8,7 @@ All tuneable values live here or in config_app.yaml — never hardcoded elsewher
 from pathlib import Path
 
 APP_NAME    = "RPi Recorder"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 # Derived from the running user's home directory rather than hardcoded, because
@@ -106,6 +106,13 @@ TIFF_COMPRESSION = "none"     # "none" | "lzw" | "deflate"
 # A shallower queue also means less RAM held in flight (a 4K frame is ~12 MB)
 # and quicker, more honest drop reporting when the disk falls behind.
 FRAME_QUEUE_SIZE = 8
+
+# How long to wait for the camera to deliver a frame before treating it as
+# stalled (at low frame rates, three frame intervals if that is longer). A
+# loose ribbon cable makes the camera stop delivering silently; without a
+# limit, recording and the preview would wait forever and the window could
+# no longer be closed.
+CAMERA_STALL_TIMEOUT_S = 2.0
 
 # Threads used to encode image-stack frames. The Pi 4 has four cores and the
 # capture thread needs one, so three leaves the system responsive. Raising this

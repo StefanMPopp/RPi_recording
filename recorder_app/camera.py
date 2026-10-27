@@ -33,6 +33,10 @@ except ImportError:
     _PICAMERA2_AVAILABLE = False
 
 
+class CameraStalledError(RuntimeError):
+    """The camera stopped delivering frames."""
+
+
 # =============================================================================
 # Sensor mode dataclass
 # =============================================================================
@@ -286,7 +290,11 @@ class PiCamera:
         while self._preview_running:
             loop_start = time.perf_counter()
             try:
-                yuv_frame = self._camera.capture_array("lores")
+                try:
+                    yuv_frame = self._camera.capture_array("lores", wait=self._frame_timeout_s())
+                except TimeoutError:
+                    self._on_stall()
+                    continue
                 if self._preview_channels == 1:
                     # Grayscale: just the Y (luma) plane — no color conversion,
                     # no risk of red/blue channel-order bugs, and cheaper per frame.
@@ -541,7 +549,16 @@ class PiCamera:
         preview_frame is always RGB (or grayscale) for display.
         """
         request_start = time.perf_counter()
-        request = self._camera.capture_request()
+        timeout_s = self._frame_timeout_s()
+        try:
+            request = self._camera.capture_request(wait=timeout_s)
+        except TimeoutError:
+            self._on_stall()
+            raise CameraStalledError(
+                f"The camera stopped sending frames (none for {timeout_s:.0f} s). "
+                f"Check that the camera ribbon cable is seated firmly at both "
+                f"ends, then try again."
+            ) from None
         request_end = time.perf_counter()
 
         try:
@@ -573,6 +590,26 @@ class PiCamera:
             timings["preview_ms"] = (time.perf_counter() - copy_end) * 1000
 
         return recording_frame, display_frame
+
+    def _frame_timeout_s(self) -> float:
+        from constants import CAMERA_STALL_TIMEOUT_S
+        fps = self._target_fps or self._active_mode.max_fps
+        return max(CAMERA_STALL_TIMEOUT_S, 3.0 / fps)
+
+    def _on_stall(self) -> None:
+        """
+        Clean up after the camera failed to deliver a frame in time.
+
+        The timed-out request is still queued in picamera2; cancelling it
+        keeps it from blocking the camera's stop() — and with it closing the
+        window. The next recording then restarts the camera instead of
+        reusing a stream that may be stuck.
+        """
+        try:
+            self._camera.cancel_all_and_flush()
+        except Exception:
+            pass
+        self._recording_channels = None
 
     def _copy_recording_frame(self, source: np.ndarray, channels: int) -> np.ndarray:
         """

@@ -800,6 +800,9 @@ def measure_format_throughput(
             elapsed       = after["time"] - before["time"]
             offered       = (after["captured"] + after["dropped"]
                              - before["captured"] - before["dropped"])
+            if offered == 0:
+                last_error = "the camera delivered no frames during the measurement"
+                continue
             written       = after["written"] - before["written"]
             dropped       = after["dropped"] - before["dropped"]
             camera_fps    = offered / elapsed
