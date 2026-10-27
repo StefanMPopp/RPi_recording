@@ -1468,7 +1468,7 @@
 
 
 <h1 id="camera-notes">Camera notes<a class="headerlink" href="#camera-notes" title="Permanent link">&para;</a></h1>
-<p>IMX477 and picamera2 behaviours that cost time to discover. Recorded here so
+<p>IMX477 and picamera2 behaviors that cost time to discover. Recorded here so
 they cost it only once.</p>
 <hr />
 <h2 id="the-ccs-adapter-ring">The C–CS adapter ring<a class="headerlink" href="#the-ccs-adapter-ring" title="Permanent link">&para;</a></h2>
@@ -1532,7 +1532,7 @@ on a mode change. That is wrong:</p>
 </ul>
 <p>The app therefore stores <strong>the scene width the full sensor would see</strong>, and
 derives px/cm and frame width from it for whichever mode is active. Modes with
-reduced field of view are labelled <code>[NN% FoV]</code> in the dropdown, and
+reduced field of view are labeled <code>[NN% FoV]</code> in the dropdown, and
 <code>fov_fraction_width</code> is written into every metadata file.</p>
 <div class="admonition warning">
 <p class="admonition-title">Practical consequence</p>
@@ -1581,11 +1581,11 @@ mode.</p>
 <p>picamera2 refuses <code>RGB888</code> on the <code>lores</code> stream:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>RuntimeError: lores stream must be YUV
 </code></pre></div>
-<p>The preview therefore requests <code>YUV420</code> and converts. For greyscale it takes the
-Y plane directly — cheaper, and it avoids colour-conversion bugs entirely.</p>
+<p>The preview therefore requests <code>YUV420</code> and converts. For grayscale it takes the
+Y plane directly — cheaper, and it avoids color-conversion bugs entirely.</p>
 <h3 id="yuv-plane-order">YUV plane order<a class="headerlink" href="#yuv-plane-order" title="Permanent link">&para;</a></h3>
 <p>OpenCV's <code>COLOR_YUV2RGB_I420</code> matches picamera2's layout. <code>YV12</code> swaps U and V.
-If colours ever come back with red and blue exchanged, that is the constant to
+If colors ever come back with red and blue exchanged, that is the constant to
 check.</p>
 <h3 id="changing-sensor-mode-requires-a-restart">Changing sensor mode requires a restart<a class="headerlink" href="#changing-sensor-mode-requires-a-restart" title="Permanent link">&para;</a></h3>
 <p>Setting a mode does not affect a running stream. The camera must be stopped,

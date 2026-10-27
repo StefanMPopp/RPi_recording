@@ -1534,6 +1534,11 @@ A <code>_metadata.yaml</code> without its footage is worthless, and vice versa.<
 <td><strong>Manual — do this</strong></td>
 </tr>
 <tr>
+<td><code>ansible/files/github_deploy_ro*</code></td>
+<td>Dev Pi only</td>
+<td><strong>Manual — do this</strong></td>
+</tr>
+<tr>
 <td><code>config_app.yaml</code> per rig</td>
 <td>Each rig</td>
 <td>Not needed; regenerate by recalibrating</td>
@@ -1545,13 +1550,15 @@ A <code>_metadata.yaml</code> without its footage is worthless, and vice versa.<
 </tr>
 </tbody>
 </table>
-<p>The two manual items are the ones that hurt. Without the SSH key you lose access
-to every rig and to GitHub; without <code>host_vars</code> you lose each rig's
-configuration. Copy both somewhere safe:</p>
+<p>The three manual items are the ones that hurt. Without the SSH key you lose
+access to every rig and to GitHub; without the read-only key every rig fails
+to bootstrap the same way pi1 did the first time; without <code>host_vars</code> you lose
+each rig's configuration. Copy all three somewhere safe:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/rig_backup
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w"> </span>~/rig_backup/
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w"> </span>~/rig_backup/
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># then copy ~/rig_backup to a USB stick or institutional storage</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>cp<span class="w"> </span>~/RPi_recording/ansible/files/github_deploy_ro*<span class="w"> </span>~/rig_backup/
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># then copy ~/rig_backup to a USB stick or institutional storage</span>
 </code></pre></div>
 <p>This backup is what decides whether replacing a dead dev Pi is a half-hour job
 or an afternoon — see <a href="../replace_dev_pi/">Replace the dev Pi</a>.</p>

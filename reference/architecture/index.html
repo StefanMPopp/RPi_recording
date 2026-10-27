@@ -1089,10 +1089,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#write-speed-and-headroom" class="md-nav__link">
+  <a href="#measuring-the-maximum-frame-rate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Write speed and headroom
+        Measuring the maximum frame rate
       
     </span>
   </a>
@@ -1348,10 +1348,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#write-speed-and-headroom" class="md-nav__link">
+  <a href="#measuring-the-maximum-frame-rate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Write speed and headroom
+        Measuring the maximum frame rate
       
     </span>
   </a>
@@ -1426,7 +1426,7 @@
 </tr>
 <tr>
 <td><code>benchmark.py</code></td>
-<td>Measures write speed; estimates data rates and headroom.</td>
+<td>Measures the SD card's sustained write speed and free space.</td>
 </tr>
 <tr>
 <td><code>config.py</code></td>
@@ -1435,6 +1435,10 @@
 <tr>
 <td><code>constants.py</code></td>
 <td>Every tuneable value in one place.</td>
+</tr>
+<tr>
+<td><code>formats.py</code></td>
+<td>The output formats, each with a stable key used by code and profiles.</td>
 </tr>
 </tbody>
 </table>
@@ -1511,17 +1515,27 @@ and mirrors the real IMX477 mode list including crop geometry.</p>
 classes' interfaces identical when adding methods, or the stub silently stops
 being a valid substitute.</p>
 <hr />
-<h2 id="write-speed-and-headroom">Write speed and headroom<a class="headerlink" href="#write-speed-and-headroom" title="Permanent link">&para;</a></h2>
-<p><code>benchmark.py</code> measures sustained write speed by writing a 400 MB file — large
-enough to defeat the burst cache and reflect real sustained performance.</p>
-<p>Headroom is then estimated rather than measured:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>write_rate  = base_rate × pixel_scale × fps_scale × greyscale_factor
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>headroom    = 1 − (write_rate ÷ (measured_speed × 0.85))
-</code></pre></div>
-<p>The 0.85 is a safety margin for variance. <code>base_rate</code> values in
-<code>_FORMAT_WRITE_RATES_MBS</code> are empirical for the IMX477 on a static scene; they
-are estimates, deliberately conservative, and only ever used to guide a choice —
-never to gate a recording.</p>
+<h2 id="measuring-the-maximum-frame-rate">Measuring the maximum frame rate<a class="headerlink" href="#measuring-the-maximum-frame-rate" title="Permanent link">&para;</a></h2>
+<p><code>record.measure_format_throughput()</code> runs the real recording machinery —
+capture thread, queue, writer thread — flat out for a few seconds per format,
+with the camera set to the sensor mode's maximum rate. Capture and encoding
+overlap in a real recording, so timing them back to back in one loop would
+report roughly 1/(capture + encode) where a recording reaches
+1/max(capture, encode); an earlier version did that and understated the rate
+by up to half.</p>
+<p>Frames dropped at the queue mean the writer could not keep up (limit:
+<strong>encoding</strong>); otherwise the camera set the pace (limit: <strong>camera</strong>).</p>
+<p>The SD card is deliberately not measured in that run: a few seconds of writes
+land in the operating system's RAM cache. Instead <code>record.capacity_for()</code>
+applies a third cap from the measured bytes per frame and the card's write
+speed, which <code>benchmark.measure_write_speed_mbs()</code> measures with <code>fsync</code> inside
+the timed region (without it, an earlier version reported 90 MB/s on a Pi 4,
+whose SD slot tops out around 40–50 MB/s). 85% of that speed is counted as
+usable. Keeping the card separate also means recalibrating it, or the card
+filling up, updates the table without re-measuring.</p>
+<p>Measurements are cached in <code>config_app.yaml</code> per resolution, color mode and
+encoder setting, so changing <code>PNG_MODE</code> or <code>TIFF_COMPRESSION</code> marks a format as
+unmeasured rather than reusing figures from a different encoder.</p>
 <hr />
 <h2 id="extension-points">Extension points<a class="headerlink" href="#extension-points" title="Permanent link">&para;</a></h2>
 <table>
@@ -1534,7 +1548,7 @@ never to gate a recording.</p>
 <tbody>
 <tr>
 <td>An output format</td>
-<td><code>OUTPUT_FORMATS</code> in <code>constants.py</code>, a writer in <code>record.py</code>, a rate in <code>benchmark.py</code></td>
+<td>An <code>OutputFormat</code> in <code>formats.py</code>, a writer in <code>record.py</code></td>
 </tr>
 <tr>
 <td>A metadata field</td>

@@ -1442,7 +1442,7 @@ deadline.</p>
 <h3 id="the-capture-path-is-uniform-across-formats">The capture path is uniform across formats<a class="headerlink" href="#the-capture-path-is-uniform-across-formats" title="Permanent link">&para;</a></h3>
 <p>All four formats go through the same software capture loop rather than using
 picamera2's hardware H.264 encoder. The hardware path is faster but gives no
-per-frame visibility, cannot produce true greyscale, and would make dropped-frame
+per-frame visibility, cannot produce true grayscale, and would make dropped-frame
 counting a guess. Honest drop reporting was judged more valuable than the speed.</p>
 <p>If H.264 at high resolution proves too slow, a hardware fast-path can be added —
 but as an option, not a replacement.</p>
@@ -1463,8 +1463,8 @@ well-meaning person fixing something in the field.</p>
 <hr />
 <h2 id="current-state">Current state<a class="headerlink" href="#current-state" title="Permanent link">&para;</a></h2>
 <p><strong>Working:</strong> the recorder app — preview with zoom and pan, all four formats,
-greyscale and colour, metadata sidecars, profiles, metadata lists with
-automatic advance, write-speed benchmarking and headroom estimates.</p>
+grayscale and color, metadata sidecars, profiles, metadata lists with
+automatic advance, measured per-format maximum frame rates.</p>
 <p><strong>Not yet built:</strong></p>
 <ul>
 <li><strong>The Manager app</strong> — a graphical front end for the Ansible playbooks.

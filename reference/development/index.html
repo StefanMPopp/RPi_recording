@@ -1496,13 +1496,17 @@ would try to build them from source on every rig.</p>
 <p>Follow the existing seams.</p>
 <h3 id="a-new-output-format">A new output format<a class="headerlink" href="#a-new-output-format" title="Permanent link">&para;</a></h3>
 <ol>
-<li><code>constants.py</code> → add to <code>OUTPUT_FORMATS</code></li>
+<li><code>formats.py</code> → an <code>OutputFormat</code> (stable <code>key</code>, display <code>label</code>,
+   extension, whether it is an image stack, tooltip description), listed in
+   <code>OUTPUT_FORMATS</code></li>
 <li><code>record.py</code> → a writer class with <code>write(frame, index)</code> and <code>close()</code>,
    and a branch in <code>make_writer()</code></li>
-<li><code>benchmark.py</code> → an entry in <code>_FORMAT_WRITE_RATES_MBS</code> and
-   <code>_GREYSCALE_FACTORS</code></li>
-<li><code>main_window.py</code> → a short description in the tooltip table</li>
+<li><code>record.py</code> → an <code>encoder_signature()</code> branch, if the encoder has settings
+   that change its speed or file size</li>
 </ol>
+<p>Code and profiles refer to a format by its <code>key</code>; never compare labels, so a
+label can be reworded without breaking saved profiles. The UI, capacity table
+and fps measurement pick up a new format automatically.</p>
 <h3 id="a-new-metadata-field">A new metadata field<a class="headerlink" href="#a-new-metadata-field" title="Permanent link">&para;</a></h3>
 <ol>
 <li><code>main_window.py</code> → the widget, in <code>_build_metadata_group</code></li>
@@ -1536,7 +1540,7 @@ pushing, check by hand:</p>
 <li>[ ] Load <code>example_metadata_list.csv</code> and step through it</li>
 </ul>
 <p>Logic that is not UI-bound <em>can</em> be tested directly, and is worth it for
-anything with real branching — CSV parsing, file naming, headroom maths:</p>
+anything with real branching — CSV parsing, file naming, capacity math:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s2">from metadata_list import build_auto_file_name</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="s2">print(build_auto_file_name(&#39;foraging&#39;, {&#39;density&#39;:&#39;high&#39;}, &#39;1&#39;))</span>
@@ -1568,7 +1572,7 @@ anything with real branching — CSV parsing, file naming, headroom maths:</p>
 <td>Work being done on the Qt main thread instead of a worker</td>
 </tr>
 <tr>
-<td>Colours wrong</td>
+<td>Colors wrong</td>
 <td>The YUV conversion constant in <code>camera.py</code></td>
 </tr>
 <tr>

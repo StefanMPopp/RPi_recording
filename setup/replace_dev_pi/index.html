@@ -863,10 +863,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-clone-and-restore-host_vars" class="md-nav__link">
+  <a href="#4-clone-and-restore-host_vars-and-the-read-only-key" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Clone and restore host_vars
+        4. Clone and restore host_vars and the read-only key
       
     </span>
   </a>
@@ -935,10 +935,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-authorise-the-new-key-on-github" class="md-nav__link">
+  <a href="#2-authorize-the-new-keys-on-github" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Authorise the new key on GitHub
+        2. Authorize the new keys on GitHub
       
     </span>
   </a>
@@ -957,10 +957,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-re-authorise-every-rig" class="md-nav__link">
+  <a href="#4-re-authorize-every-rig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Re-authorise every rig
+        4. Re-authorize every rig
       
     </span>
   </a>
@@ -1443,10 +1443,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-clone-and-restore-host_vars" class="md-nav__link">
+  <a href="#4-clone-and-restore-host_vars-and-the-read-only-key" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Clone and restore host_vars
+        4. Clone and restore host_vars and the read-only key
       
     </span>
   </a>
@@ -1515,10 +1515,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-authorise-the-new-key-on-github" class="md-nav__link">
+  <a href="#2-authorize-the-new-keys-on-github" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Authorise the new key on GitHub
+        2. Authorize the new keys on GitHub
       
     </span>
   </a>
@@ -1537,10 +1537,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-re-authorise-every-rig" class="md-nav__link">
+  <a href="#4-re-authorize-every-rig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Re-authorise every rig
+        4. Re-authorize every rig
       
     </span>
   </a>
@@ -1634,8 +1634,9 @@
 
 
 <h1 id="replace-or-migrate-the-dev-pi">Replace or migrate the dev Pi<a class="headerlink" href="#replace-or-migrate-the-dev-pi" title="Permanent link">&para;</a></h1>
-<p>The dev Pi holds two things that exist nowhere else: the <strong>SSH private key</strong>
-and the <strong><code>host_vars</code> files</strong>. Everything else is in Git.</p>
+<p>The dev Pi holds three things that exist nowhere else: the <strong>SSH private
+key</strong>, the <strong>read-only deploy key</strong>, and the <strong><code>host_vars</code> files</strong>. Everything
+else is in Git.</p>
 <p>Whether this is a ten-minute job or an afternoon depends entirely on one
 question:</p>
 <div class="admonition question">
@@ -1643,7 +1644,7 @@ question:</p>
 <p><strong>Yes</strong> → <a href="#migration-old-machine-still-works">Migration</a>. Copy the key
 across and the rigs never know anything changed.</p>
 <p><strong>No</strong> → <a href="#recovery-old-machine-is-gone">Recovery</a>. You must generate a new
-key and re-authorise all eight rigs using their passwords.</p>
+key and re-authorize all eight rigs using their passwords.</p>
 </div>
 <p>Read <a href="#what-makes-a-dev-pi">what makes a dev Pi</a> first if you are unsure what
 needs to move.</p>
@@ -1671,7 +1672,12 @@ needs to move.</p>
 <tr>
 <td><code>~/.ssh/rig_recording</code></td>
 <td><strong>Generated once</strong></td>
-<td>Only by re-keying every rig</td>
+<td>Only by re-keying the dev Pi's GitHub access</td>
+</tr>
+<tr>
+<td><code>ansible/files/github_deploy_ro</code></td>
+<td><strong>Generated once</strong></td>
+<td>Only by re-keying every rig's GitHub access</td>
 </tr>
 <tr>
 <td><code>ansible/host_vars/*.yml</code></td>
@@ -1690,7 +1696,8 @@ needs to move.</p>
 </tr>
 </tbody>
 </table>
-<p>Only rows three and four matter. They are the entire reason this page exists.</p>
+<p>Only rows three, four and five matter. They are the entire reason this page
+exists.</p>
 <div class="admonition note">
 <p class="admonition-title">There is nothing special about the machine</p>
 <p>"Dev Pi" is a role, not a configuration. Any machine with the key, the
@@ -1706,6 +1713,7 @@ recorder app against a real camera much easier.</p>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording<span class="w">      </span>~/devpi_migration/
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>~/.ssh/rig_recording.pub<span class="w">  </span>~/devpi_migration/
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w"> </span>~/devpi_migration/
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/files<span class="w"> </span>~/devpi_migration/
 </code></pre></div>
 <p>Copy <code>~/devpi_migration</code> to a USB stick — <strong>not</strong> into the repository, and not
 anywhere shared.</p>
@@ -1716,10 +1724,10 @@ anywhere shared.</p>
 <li>[ ] Which physical rig is which <code>piN</code></li>
 </ul>
 <h3 id="2-set-up-the-new-machine">2. Set up the new machine<a class="headerlink" href="#2-set-up-the-new-machine" title="Permanent link">&para;</a></h3>
-<p>Follow <a href="../dev_pi/">Set up the dev Pi</a> steps 1, 2, 5 and 7 — flash the OS,
+<p>Follow <a href="../dev_pi/">Set up the dev Pi</a> steps 1, 2, 6 and 8 — flash the OS,
 install Git and Ansible, set the Git identity, install the app dependencies.</p>
-<p><strong>Skip steps 3 and 4</strong> (generating a key, adding it to GitHub). You are
-reusing the existing key rather than making a new one.</p>
+<p><strong>Skip steps 3, 4 and 5</strong> (generating both keys, adding them to GitHub). You
+are reusing the existing keys rather than making new ones.</p>
 <h3 id="3-restore-the-key">3. Restore the key<a class="headerlink" href="#3-restore-the-key" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.ssh
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/rig_recording*<span class="w">  </span>~/.ssh/
@@ -1744,10 +1752,17 @@ reusing the existing key rather than making a new one.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ssh<span class="w"> </span>-T<span class="w"> </span>git@github.com
 </code></pre></div>
 <p>A greeting with your username means the key works and GitHub still accepts it.</p>
-<h3 id="4-clone-and-restore-host_vars">4. Clone and restore host_vars<a class="headerlink" href="#4-clone-and-restore-host_vars" title="Permanent link">&para;</a></h3>
+<h3 id="4-clone-and-restore-host_vars-and-the-read-only-key">4. Clone and restore host_vars and the read-only key<a class="headerlink" href="#4-clone-and-restore-host_vars-and-the-read-only-key" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>cp<span class="w"> </span>/media/usb/devpi_migration/host_vars/*.yml<span class="w"> </span>~/RPi_recording/ansible/host_vars/
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/RPi_recording/ansible/files
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>cp<span class="w"> </span>/media/usb/devpi_migration/files/github_deploy_ro*<span class="w"> </span>~/RPi_recording/ansible/files/
 </code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Must come after the clone</p>
+<p><code>ansible/files/</code> lives inside the repo, and <code>git clone</code> refuses to clone
+into a non-empty directory — this has to happen after, not before.</p>
+</div>
 <h3 id="5-verify">5. Verify<a class="headerlink" href="#5-verify" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ansible<span class="w"> </span>pis<span class="w"> </span>-m<span class="w"> </span>ping<span class="w">          </span><span class="c1"># all rigs answer pong</span>
@@ -1772,21 +1787,27 @@ reached with their passwords.</p>
 <p>Budget an afternoon, mostly for step 4.</p>
 <h3 id="1-build-a-new-dev-pi-from-scratch">1. Build a new dev Pi from scratch<a class="headerlink" href="#1-build-a-new-dev-pi-from-scratch" title="Permanent link">&para;</a></h3>
 <p>Follow <a href="../dev_pi/">Set up the dev Pi</a> in full, <strong>including</strong> generating a new
-key. You now have a working machine with a key no rig recognises.</p>
-<h3 id="2-authorise-the-new-key-on-github">2. Authorise the new key on GitHub<a class="headerlink" href="#2-authorise-the-new-key-on-github" title="Permanent link">&para;</a></h3>
-<p>The old deploy key still sits in the repository settings, pointing at a machine
-that no longer exists.</p>
+key. You now have a working machine with a key no rig recognizes.</p>
+<h3 id="2-authorize-the-new-keys-on-github">2. Authorize the new keys on GitHub<a class="headerlink" href="#2-authorize-the-new-keys-on-github" title="Permanent link">&para;</a></h3>
+<p>Following <a href="../dev_pi/">Set up the dev Pi</a> "in full" generated BOTH keys fresh —
+the dev Pi's write key and the rigs' read-only key. Both old deploy key
+entries still sit in the repository settings, pointing at a machine that no
+longer exists.</p>
 <ol>
 <li><strong>GitHub → repository → Settings → Deploy keys</strong></li>
-<li>Delete the old key</li>
+<li>Delete both old keys (<code>devpi</code> and <code>rig-readonly</code>)</li>
 <li>Add the new <code>~/.ssh/rig_recording.pub</code>, <strong>with write access ticked</strong></li>
+<li>Add the new <code>ansible/files/github_deploy_ro.pub</code>, <strong>write access left off</strong></li>
 </ol>
+<p>The rigs don't need touching for the read-only key specifically — the next
+time each one is bootstrapped (step 4 below covers getting SSH access back),
+<code>bootstrap.yml</code> copies the new key onto it automatically.</p>
 <h3 id="3-clone-the-repository">3. Clone the repository<a class="headerlink" href="#3-clone-the-repository" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
 </code></pre></div>
 <p><code>inventory.ini</code> comes back with the clone, so you already know every rig's
 address.</p>
-<h3 id="4-re-authorise-every-rig">4. Re-authorise every rig<a class="headerlink" href="#4-re-authorise-every-rig" title="Permanent link">&para;</a></h3>
+<h3 id="4-re-authorize-every-rig">4. Re-authorize every rig<a class="headerlink" href="#4-re-authorize-every-rig" title="Permanent link">&para;</a></h3>
 <p>This is the slow part. Each rig must be told about the new key, using its
 password:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">for</span><span class="w"> </span>n<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="m">8</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
@@ -1838,7 +1859,7 @@ rigs still trust it.</p>
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-a<span class="w"> </span><span class="s2">&quot;user=pi state=absent key=&#39;</span><span class="k">$(</span>cat<span class="w"> </span>/path/to/old_key.pub<span class="k">)</span><span class="s2">&#39;&quot;</span>
 </code></pre></div>
 <p>If the old public key is also lost, edit <code>~/.ssh/authorized_keys</code> on each rig
-by hand and delete the unrecognised entry.</p>
+by hand and delete the unrecognized entry.</p>
 <hr />
 <h2 id="handover-to-another-person">Handover to another person<a class="headerlink" href="#handover-to-another-person" title="Permanent link">&para;</a></h2>
 <p>Migration and handover are the same operation with one decision added: <strong>does
@@ -1883,7 +1904,9 @@ anyway, poor for a temporary or partial one.</p>
 <h2 id="preventing-all-of-this">Preventing all of this<a class="headerlink" href="#preventing-all-of-this" title="Permanent link">&para;</a></h2>
 <p>Two commands, occasionally:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/devpi_backup
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w"> </span>~/RPi_recording/ansible/host_vars/*.yml<span class="w"> </span>~/devpi_backup/
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w"> </span>~/devpi_backup/
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>cp<span class="w"> </span>~/RPi_recording/ansible/host_vars/*.yml<span class="w"> </span>~/devpi_backup/
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>cp<span class="w"> </span>~/RPi_recording/ansible/files/github_deploy_ro*<span class="w"> </span>~/devpi_backup/
 </code></pre></div>
 <p>Copy that folder somewhere off the Pi — institutional storage, an encrypted USB
 stick, anywhere that is not the machine it protects against losing.</p>

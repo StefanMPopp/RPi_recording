@@ -1254,27 +1254,28 @@
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── record.py                 capture engine, writers
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   ├── metadata.py               metadata sidecar
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   ├── metadata_list.py          CSV lists, auto file naming
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── benchmark.py              write speed, headroom
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   ├── benchmark.py              SD write speed, free space
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── config.py                 YAML load/save
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── constants.py              all tuneable values
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── requirements.txt          pip dependencies only
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   └── example_metadata_list.csv
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>├── ansible/                      fleet management
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── inventory.ini             which Pis exist, and where
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── bootstrap.yml             set up a Pi from scratch
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   ├── update.yml                pull latest code onto all Pis
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   └── host_vars/
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│       ├── template.yml          committed
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│       └── piN.yml               NOT committed — per-rig values
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>├── wiki/                         this documentation
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   ├── mkdocs.yml
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   └── docs/
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>├── .gitignore
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>├── LICENSE
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>└── README.md                     one-liner pointing at the wiki
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── formats.py                output formats (MJPEG, TIFF, PNG, H.264)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   ├── requirements.txt          pip dependencies only
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   └── example_metadata_list.csv
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>├── ansible/                      fleet management
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── inventory.ini             which Pis exist, and where
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   ├── bootstrap.yml             set up a Pi from scratch
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── update.yml                pull latest code onto all Pis
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   └── host_vars/
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│       ├── template.yml          committed
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│       └── piN.yml               NOT committed — per-rig values
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>├── wiki/                         this documentation
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── mkdocs.yml
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   └── docs/
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>├── .gitignore
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>├── LICENSE
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>└── README.md                     one-liner pointing at the wiki
 </code></pre></div>
 <hr />
 <h2 id="deliberately-not-committed">Deliberately not committed<a class="headerlink" href="#deliberately-not-committed" title="Permanent link">&para;</a></h2>
@@ -1316,7 +1317,7 @@
 <div class="admonition warning">
 <p class="admonition-title">config_app.yaml must stay uncommitted</p>
 <p>It holds a write speed measured on one specific SD card. Sharing it across
-rigs would give every Pi wrong headroom estimates, and the wrongness would
+rigs would give every Pi wrong SD card limits, and the wrongness would
 be invisible until frames started dropping.</p>
 </div>
 <hr />

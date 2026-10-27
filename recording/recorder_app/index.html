@@ -1350,7 +1350,7 @@ When a recording starts, the controls are replaced by a live status panel.</p>
 <tbody>
 <tr>
 <td><span class="keys"><kbd class="key-control">Ctrl</kbd></span> + scroll</td>
-<td>Zoom in and out, centred on the cursor</td>
+<td>Zoom in and out, centerd on the cursor</td>
 </tr>
 <tr>
 <td>scroll</td>
@@ -1379,8 +1379,8 @@ area</strong>, not just a smaller image. See
 <a href="../choosing_settings/#sensor-modes-and-field-of-view">choosing settings</a>.</p>
 <p><strong>Framerate</strong> — any value up to the mode's maximum, shown as <code>max NN.N</code> beside
 the field. Lower framerates are the simplest way to reduce data rate without
-losing resolution, and are ideal for slow behaviours or long recordings.</p>
-<p><strong>Colour</strong> — Greyscale (default) or Colour. Greyscale records only the
+losing resolution, and are ideal for slow behaviors or long recordings.</p>
+<p><strong>Color</strong> — Grayscale (default) or Color. Grayscale records only the
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.</p>
 <p><strong>Show preview</strong> — untick if the Pi struggles. Displaying the preview costs
@@ -1388,13 +1388,15 @@ some CPU; disabling it frees that for encoding.</p>
 <hr />
 <h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
 <p><strong>Save to</strong> — the output folder. The folder icon opens a browser.</p>
-<p><strong>Format</strong> — the file format. Hover the blue ⓘ for a comparison table showing
-write rate, file size per minute, write headroom and maximum recording time for
-every format at your current settings. See
-<a href="../../reference/file_formats/">file formats</a>.</p>
-<p><strong>Write headroom</strong> — how much of the SD card's write speed is left unused.
-Green is comfortable, amber is marginal, red means frames will be dropped.
-Hover its ⓘ for the thresholds.</p>
+<p><strong>Format</strong> — the file format. Hover the blue ⓘ for the measured capacity table:
+for every format at the current resolution and color mode, the maximum frame
+rate, what limits it (camera, encoding or SD card), megabytes per frame, and how
+long a recording fits on the card. Empty until you run
+<strong>Settings → Measure maximum fps</strong>. See
+<a href="../choosing_settings/#maximum-frame-rate">maximum frame rate</a>.</p>
+<p>The line below the selector summarizes the chosen format — its maximum and how
+long fits on the card — and turns red if the selected frame rate is above that
+maximum.</p>
 <p><strong>Name from metadata</strong> — when ticked (the default), the file name is built
 automatically as:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{experiment}_{treatments}_{trial}
@@ -1422,9 +1424,8 @@ yourself.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>File name</strong> — the name without extension. Read-only while auto-naming is on.</p>
-<p><strong>Folder name</strong> — only used for image stacks, where images go into their own
-folder. Greyed out for video formats.</p>
+<p><strong>File name</strong> — the name without extension. Read-only while auto-naming is on.
+For image stacks it is also the name of the folder the images go into.</p>
 <p><strong>Duration</strong> — tick <strong>Record until stopped</strong> to end manually, or untick and set
 a number of seconds for the recording to stop itself.</p>
 <hr />
@@ -1489,10 +1490,14 @@ salvageable if you notice early.</p>
 <hr />
 <h2 id="menus">Menus<a class="headerlink" href="#menus" title="Permanent link">&para;</a></h2>
 <p><strong>File → Load profile / Save profile</strong> — same as the buttons.</p>
+<p><strong>Settings → Measure maximum fps for current settings</strong> — records each format
+flat out for a few seconds (about 25 s in total) and fills the capacity table
+for the current resolution and color mode. Test footage goes to a hidden folder
+in the save directory and is deleted.</p>
 <p><strong>Settings → Recalibrate write speed</strong> — measures the SD card's sustained write
-speed by writing a 400 MB test file, taking about 15 seconds. Run this when
-using a new SD card, or if the headroom figures look wrong. The result is stored
-so it does not need repeating.</p>
+speed by writing a 400 MB test file and forcing it onto the card, taking 10–20
+seconds. Run it when using a new card. The first fps measurement runs it
+automatically if it has never been done. The result is stored per Pi.</p>
 <p><strong>Settings → Include treatment names in file name</strong> — the naming style toggle
 described above.</p>
 

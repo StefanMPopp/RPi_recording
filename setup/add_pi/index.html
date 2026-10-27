@@ -929,6 +929,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#missing-sudo-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing sudo password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#playbook-failures" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1476,6 +1487,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#missing-sudo-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing sudo password
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#playbook-failures" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1673,7 +1695,7 @@ whatever is already correct.</p>
 <li>[ ] The preview shows a live image</li>
 <li>[ ] The sensor mode dropdown lists the IMX477 modes</li>
 <li>[ ] <strong>Settings → Recalibrate write speed</strong> completes and gives a plausible
-      figure (20–90 MB/s for a U30 card)</li>
+      figure (roughly 20–45 MB/s on a Pi 4's SD slot)</li>
 <li>[ ] A 10-second test recording produces a file and a metadata file, with no
       dropped frames</li>
 </ul>
@@ -1712,6 +1734,18 @@ rather than a hang.</p>
 not the one on the dev Pi — though keeping them the same across all machines
 avoids exactly this confusion. <code>ansible_user</code> in <code>inventory.ini</code> assumes they
 match.</p>
+<h3 id="missing-sudo-password">Missing sudo password<a class="headerlink" href="#missing-sudo-password" title="Permanent link">&para;</a></h3>
+<p><code>bootstrap.yml</code> needs <code>sudo</code> on the rig for installing packages, and Ansible
+doesn't have a password for it. Set up passwordless sudo once per rig — this
+matches how Raspberry Pi OS's default user is normally configured, so it's
+likely something changed rather than a step that was always needed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>ssh<span class="w"> </span>pi@pi1.local
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD:ALL&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/010_pi-nopasswd
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nb">exit</span>
+</code></pre></div>
+<p>Or, without changing anything on the rig, supply the password each run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml<span class="w"> </span>--limit<span class="w"> </span>pi1<span class="w"> </span>--ask-become-pass
+</code></pre></div>
 <h3 id="playbook-failures">Playbook failures<a class="headerlink" href="#playbook-failures" title="Permanent link">&para;</a></h3>
 <p>Ansible names the failing task and host. Common causes:</p>
 <table>
@@ -1734,18 +1768,31 @@ match.</p>
 <td>Repeat 1.4; check the username</td>
 </tr>
 <tr>
-<td>apt task fails</td>
-<td>No internet on the Pi</td>
-<td>Check its network</td>
+<td><code>Missing sudo password</code></td>
+<td>The rig's user needs a password for <code>sudo</code></td>
+<td>Set up passwordless sudo for that user, or re-run with <code>--ask-become-pass</code></td>
 </tr>
 <tr>
-<td>Repo clone fails</td>
-<td>Deploy key missing</td>
-<td>See <a href="../dev_pi/#4-give-github-the-public-key">dev Pi setup</a></td>
+<td><code>Failed to update apt cache</code></td>
+<td>Usually a network problem, sometimes a captive portal</td>
+<td>SSH in and run <code>sudo apt update</code> directly to see the real error</td>
+</tr>
+<tr>
+<td>Git clone <code>Permission denied (publickey)</code> on the <strong>rig</strong></td>
+<td>The read-only deploy key hasn't been generated or added to GitHub yet</td>
+<td>See <a href="../dev_pi/#5-generate-a-read-only-key-for-the-recording-rigs">dev Pi setup, step 5</a> — one-time, then automatic for every rig</td>
+</tr>
+<tr>
+<td>Repo clone fails on the <strong>dev Pi</strong></td>
+<td>Dev Pi's own write-access deploy key missing</td>
+<td>See <a href="../dev_pi/#4-give-github-the-public-key">dev Pi setup, step 4</a></td>
 </tr>
 </tbody>
 </table>
-<p>Fix and re-run — completed steps are skipped.</p>
+<p>Fix and re-run — completed steps are skipped. To retry just the GitHub key
+step without repeating everything else:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>ansible-playbook<span class="w"> </span>-i<span class="w"> </span>inventory.ini<span class="w"> </span>bootstrap.yml<span class="w"> </span>--limit<span class="w"> </span>pi1<span class="w"> </span>--tags<span class="w"> </span>github
+</code></pre></div>
 
 
 

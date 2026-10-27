@@ -641,10 +641,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#colour-mode" class="md-nav__link">
+  <a href="#color-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Colour mode
+        Color mode
       
     </span>
   </a>
@@ -663,22 +663,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#write-headroom" class="md-nav__link">
+  <a href="#maximum-frame-rate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Write headroom
+        Maximum frame rate
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Write headroom">
+    <nav class="md-nav" aria-label="Maximum frame rate">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#if-headroom-is-too-low" class="md-nav__link">
+  <a href="#if-the-frame-rate-you-need-is-above-the-maximum" class="md-nav__link">
     <span class="md-ellipsis">
       
-        If headroom is too low
+        If the frame rate you need is above the maximum
       
     </span>
   </a>
@@ -1287,10 +1287,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#colour-mode" class="md-nav__link">
+  <a href="#color-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Colour mode
+        Color mode
       
     </span>
   </a>
@@ -1309,22 +1309,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#write-headroom" class="md-nav__link">
+  <a href="#maximum-frame-rate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Write headroom
+        Maximum frame rate
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Write headroom">
+    <nav class="md-nav" aria-label="Maximum frame rate">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#if-headroom-is-too-low" class="md-nav__link">
+  <a href="#if-the-frame-rate-you-need-is-above-the-maximum" class="md-nav__link">
     <span class="md-ellipsis">
       
-        If headroom is too low
+        If the frame rate you need is above the maximum
       
     </span>
   </a>
@@ -1368,12 +1368,12 @@
 
 
 <h1 id="choosing-settings">Choosing settings<a class="headerlink" href="#choosing-settings" title="Permanent link">&para;</a></h1>
-<p>How to pick resolution, framerate, colour mode and format for an experiment.</p>
+<p>How to pick resolution, framerate, color mode and format for an experiment.</p>
 <hr />
 <h2 id="start-from-the-animal-not-the-camera">Start from the animal, not the camera<a class="headerlink" href="#start-from-the-animal-not-the-camera" title="Permanent link">&para;</a></h2>
 <p>Two questions decide almost everything:</p>
 <ol>
-<li><strong>How fast does the behaviour happen?</strong> → sets the framerate</li>
+<li><strong>How fast does the behavior happen?</strong> → sets the framerate</li>
 <li><strong>How small is the feature you need to resolve?</strong> → sets the resolution</li>
 </ol>
 <p>Everything else follows. Recording at maximum settings "to be safe" produces
@@ -1383,7 +1383,7 @@ enormous files, risks dropped frames, and rarely improves the tracking.</p>
 <table>
 <thead>
 <tr>
-<th>Behaviour</th>
+<th>Behavior</th>
 <th>Suggested fps</th>
 </tr>
 </thead>
@@ -1461,9 +1461,9 @@ of view are marked <code>[NN% FoV]</code> in the dropdown.</p>
 usually the right choice.</strong> It keeps the full field of view and allows up to
 66 fps.</p>
 <hr />
-<h2 id="colour-mode">Colour mode<a class="headerlink" href="#colour-mode" title="Permanent link">&para;</a></h2>
-<p>Use <strong>greyscale</strong> unless the analysis needs colour. Tracking works on
-brightness; the colour channels add data without adding usable signal.</p>
+<h2 id="color-mode">Color mode<a class="headerlink" href="#color-mode" title="Permanent link">&para;</a></h2>
+<p>Use <strong>grayscale</strong> unless the analysis needs color. Tracking works on
+brightness; the color channels add data without adding usable signal.</p>
 <table>
 <thead>
 <tr>
@@ -1475,15 +1475,15 @@ brightness; the colour channels add data without adding usable signal.</p>
 </thead>
 <tbody>
 <tr>
-<td>Greyscale saving</td>
+<td>Grayscale saving</td>
 <td>~3×</td>
 <td>~2.5×</td>
 <td>~1.5×</td>
 </tr>
 </tbody>
 </table>
-<p>Choose colour only for things like distinguishing colour-marked individuals or
-recording colour-dependent behaviour.</p>
+<p>Choose color only for things like distinguishing color-marked individuals or
+recording color-dependent behavior.</p>
 <hr />
 <h2 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h2>
 <p>See <a href="../../reference/file_formats/">file formats</a> for the full comparison. Short
@@ -1498,7 +1498,7 @@ version:</p>
 <tbody>
 <tr>
 <td><strong>MJPEG (.avi)</strong></td>
-<td>Default for tracking. Every frame independent, no motion artefacts</td>
+<td>Default for tracking. Every frame independent, no motion artifacts</td>
 </tr>
 <tr>
 <td><strong>TIFF stack</strong></td>
@@ -1517,66 +1517,79 @@ version:</p>
 <div class="admonition warning">
 <p class="admonition-title">H.264 and tracking</p>
 <p>H.264 compresses by describing how frames <em>differ</em> from one another. On
-fast-moving subjects this produces blocky artefacts exactly where the animal
+fast-moving subjects this produces blocky artifacts exactly where the animal
 is, which is exactly where the tracker is looking. It is excellent for
 reviewing footage by eye and risky for automated tracking. If storage forces
 it, validate the tracking on a short H.264 clip before committing a whole
 experiment to it.</p>
 </div>
 <hr />
-<h2 id="write-headroom">Write headroom<a class="headerlink" href="#write-headroom" title="Permanent link">&para;</a></h2>
-<p>The SD card can only write so fast. <strong>Write headroom</strong> is the percentage of that
-speed left unused at your current settings.</p>
+<h2 id="maximum-frame-rate">Maximum frame rate<a class="headerlink" href="#maximum-frame-rate" title="Permanent link">&para;</a></h2>
+<p>Every recording is capped by the slowest of three stages, and which one binds
+depends on resolution, color mode <strong>and</strong> format:</p>
 <table>
 <thead>
 <tr>
-<th>Headroom</th>
-<th>Meaning</th>
+<th>Stage</th>
+<th>What it is</th>
+<th>Typical when</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>&gt; 30%</strong> ✔</td>
-<td>Safe</td>
+<td><strong>camera</strong></td>
+<td>Sensor readout and image processing</td>
+<td>High resolution, fast encoders</td>
 </tr>
 <tr>
-<td><strong>10–30%</strong> ⚠</td>
-<td>Marginal — drops possible if the Pi is busy</td>
+<td><strong>encoding</strong></td>
+<td>Compressing each frame</td>
+<td>MJPEG and compressed stacks at high resolution</td>
 </tr>
 <tr>
-<td><strong>&lt; 10%</strong> ✖</td>
-<td>Expect dropped frames</td>
+<td><strong>SD card</strong></td>
+<td>Writing the bytes</td>
+<td>Uncompressed stacks at high resolution</td>
 </tr>
 </tbody>
 </table>
-<p>Hover the ⓘ next to <strong>Format</strong> for a table of every format at your current
-resolution and framerate, including maximum recording time given free space.</p>
-<h3 id="if-headroom-is-too-low">If headroom is too low<a class="headerlink" href="#if-headroom-is-too-low" title="Permanent link">&para;</a></h3>
-<p>In order of how much they help relative to what they cost:</p>
-<ol>
-<li><strong>Switch to greyscale</strong> — up to 3× less data, no loss for tracking</li>
-<li><strong>Lower the framerate</strong> — proportional saving, no loss of spatial detail</li>
-<li><strong>Lower the resolution</strong> — but check the field of view does not shrink</li>
-<li><strong>Switch to H.264</strong> — large saving, with the tracking caveat above</li>
-<li><strong>Disable the preview</strong> — frees CPU, small effect</li>
-</ol>
+<p>Nothing here is estimated. Run <strong>Settings → Measure maximum fps</strong> once for a
+resolution and color mode: it records each format flat out for a few seconds
+(about 25 s in total). The ⓘ next to <strong>Format</strong> then shows one table — the
+maximum fps of every format, what limits it, megabytes per frame, and how long a
+recording fits on the card. The line under the selector summarizes the chosen
+format and turns red if the selected frame rate is above its maximum.</p>
+<p>Measurements are stored per resolution and color mode, so switching to an
+unmeasured combination shows it as not measured.</p>
+<h3 id="if-the-frame-rate-you-need-is-above-the-maximum">If the frame rate you need is above the maximum<a class="headerlink" href="#if-the-frame-rate-you-need-is-above-the-maximum" title="Permanent link">&para;</a></h3>
+<p>Read the <strong>Limited by</strong> column — the fix depends on it:</p>
+<ul>
+<li><strong>camera</strong> — lower the resolution; nothing else helps.
+  <code>2028 × 1520</code> keeps the full field of view at a quarter of the pixels.</li>
+<li><strong>encoding</strong> — choose a faster format (the table shows which), switch to
+  grayscale, or lower the resolution.</li>
+<li><strong>SD card</strong> — choose a format with smaller frames, switch to grayscale, or
+  use a faster card. The stack formats are written uncompressed by default for
+  speed; if the card is what limits them, a compressed setting may record
+  faster (see <a href="../../reference/file_formats/">file formats</a>).</li>
+</ul>
 <div class="admonition note">
-<p class="admonition-title">Recalibrate if the numbers look wrong</p>
-<p>Headroom is based on a measured write speed stored per Pi. If you have
-swapped the SD card, run <strong>Settings → Recalibrate write speed</strong>. Cards also
-slow as they fill and as they age, so recalibrate occasionally on older
-cards.</p>
+<p class="admonition-title">Measure the card once per card</p>
+<p>The SD card limit uses a write speed measured per card
+(<strong>Settings → Recalibrate write speed</strong>, run automatically by the first fps
+measurement). Re-run it after swapping the card. Cards also slow as they fill
+and age.</p>
 </div>
 <hr />
 <h2 id="worked-examples">Worked examples<a class="headerlink" href="#worked-examples" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Ant trail following</label><label for="__tabbed_1_2">Fly escape responses</label><label for="__tabbed_1_3">Colony-level timelapse</label><label for="__tabbed_1_4">Colour-marked individuals</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Ant trail following</label><label for="__tabbed_1_2">Fly escape responses</label><label for="__tabbed_1_3">Colony-level timelapse</label><label for="__tabbed_1_4">Color-marked individuals</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Slow, needs whole arena, long recordings.</p>
 <ul>
 <li>2028 × 1520, full field of view</li>
 <li>15 fps</li>
-<li>Greyscale</li>
+<li>Grayscale</li>
 <li>MJPEG</li>
 </ul>
 </div>
@@ -1585,7 +1598,7 @@ cards.</p>
 <ul>
 <li>1332 × 990 (cropped field of view is fine — the event is central)</li>
 <li>120 fps</li>
-<li>Greyscale</li>
+<li>Grayscale</li>
 <li>MJPEG</li>
 </ul>
 </div>
@@ -1594,7 +1607,7 @@ cards.</p>
 <ul>
 <li>4056 × 3040</li>
 <li>0.5 fps</li>
-<li>Greyscale</li>
+<li>Grayscale</li>
 <li>PNG stack (slow encoding is irrelevant at this framerate)</li>
 </ul>
 </div>
@@ -1603,8 +1616,8 @@ cards.</p>
 <ul>
 <li>2028 × 1520</li>
 <li>30 fps</li>
-<li><strong>Colour</strong></li>
-<li>MJPEG — check headroom, colour roughly triples the data rate</li>
+<li><strong>Color</strong></li>
+<li>MJPEG — measure first: color roughly triples the data per frame</li>
 </ul>
 </div>
 </div>

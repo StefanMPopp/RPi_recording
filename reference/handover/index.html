@@ -1343,6 +1343,8 @@ mechanics of moving to a new machine or issuing a second key, see
 <li>[ ] <strong>Recording Pis</strong> — username and password (same across rigs)</li>
 <li>[ ] <strong>Router</strong> — admin login, for the static IP reservations</li>
 <li>[ ] <strong>SSH key</strong> — <code>~/.ssh/rig_recording</code> and <code>.pub</code> on the dev Pi</li>
+<li>[ ] <strong>Read-only deploy key</strong> — <code>ansible/files/github_deploy_ro</code> and <code>.pub</code>
+      on the dev Pi</li>
 </ul>
 <div class="admonition danger">
 <p class="admonition-title">The SSH key is the critical item</p>
@@ -1359,7 +1361,8 @@ an afternoon's work — see
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/rig_backup
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>cp<span class="w"> </span>~/.ssh/rig_recording*<span class="w">                    </span>~/rig_backup/
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/RPi_recording/ansible/host_vars<span class="w">      </span>~/rig_backup/
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>~/RPi_recording/ansible/inventory.ini<span class="w">     </span>~/rig_backup/
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>cp<span class="w"> </span>~/RPi_recording/ansible/files/github_deploy_ro*<span class="w">  </span>~/rig_backup/
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>cp<span class="w"> </span>~/RPi_recording/ansible/inventory.ini<span class="w">     </span>~/rig_backup/
 </code></pre></div>
 <table>
 <thead>
@@ -1371,7 +1374,11 @@ an afternoon's work — see
 <tbody>
 <tr>
 <td><code>~/.ssh/rig_recording</code></td>
-<td>Access to everything</td>
+<td>Access to everything, with write</td>
+</tr>
+<tr>
+<td><code>ansible/files/github_deploy_ro*</code></td>
+<td>What every rig uses to clone the repo — without it, bootstrapping a rig fails with a GitHub permission error</td>
 </tr>
 <tr>
 <td><code>ansible/host_vars/*.yml</code></td>
@@ -1405,6 +1412,16 @@ speed measurement, regenerated in fifteen seconds by
    else. See <a href="../camera_notes/">camera notes</a>.</p>
 </li>
 <li>
+<p><strong>Each rig needs its own way to reach GitHub.</strong> <code>bootstrap.yml</code> clones the
+   repo by running <code>git</code> <em>on the rig itself</em>, not on the dev Pi — so the dev
+   Pi's own SSH key being set up correctly says nothing about whether a rig
+   can clone. This is handled automatically by the read-only deploy key
+   above, but if <code>ansible/files/github_deploy_ro</code> ever goes missing, every
+   new rig fails bootstrap with <code>Permission denied (publickey)</code> on the git
+   clone step, and the fix is regenerating that key — see
+   <a href="../../setup/dev_pi/">Set up the dev Pi, step 5</a>.</p>
+</li>
+<li>
 <p><strong>Never edit code on a recording Pi.</strong> Changes exist on one rig, are
    invisible, and are destroyed at the next update. Dev Pi → GitHub → rigs.</p>
 </li>
@@ -1413,15 +1430,15 @@ speed measurement, regenerated in fifteen seconds by
    view. Use <code>2028 × 1520</code> for high framerates with the whole arena.</p>
 </li>
 <li>
-<p><strong>Greyscale unless colour is genuinely needed.</strong> Three times smaller, no loss
+<p><strong>Grayscale unless color is genuinely needed.</strong> Three times smaller, no loss
    for tracking.</p>
 </li>
 <li>
-<p><strong>H.264 is risky for tracking.</strong> Inter-frame compression puts artefacts
+<p><strong>H.264 is risky for tracking.</strong> Inter-frame compression puts artifacts
    exactly on moving subjects. Validate before committing an experiment to it.</p>
 </li>
 <li>
-<p><strong>Recalibrate write speed after any SD card swap.</strong> Otherwise the headroom
+<p><strong>Recalibrate write speed after any SD card swap.</strong> Otherwise the SD card
    estimates describe a card that is no longer present.</p>
 </li>
 <li>
@@ -1444,8 +1461,8 @@ speed measurement, regenerated in fifteen seconds by
 <hr />
 <h2 id="current-state-and-open-work">Current state and open work<a class="headerlink" href="#current-state-and-open-work" title="Permanent link">&para;</a></h2>
 <p><strong>Working:</strong> the recorder app in full — preview with zoom and pan, four
-formats, greyscale and colour, metadata sidecars, profiles, CSV metadata lists
-with automatic advance, write-speed benchmarking and headroom estimates.</p>
+formats, grayscale and color, metadata sidecars, profiles, CSV metadata lists
+with automatic advance, measured per-format maximum frame rates.</p>
 <p><strong>Not built yet:</strong></p>
 <table>
 <thead>

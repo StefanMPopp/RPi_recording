@@ -806,10 +806,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-set-your-git-identity" class="md-nav__link">
+  <a href="#5-generate-a-read-only-key-for-the-recording-rigs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Set your Git identity
+        5. Generate a read-only key for the recording rigs
       
     </span>
   </a>
@@ -817,10 +817,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-clone-the-repository" class="md-nav__link">
+  <a href="#6-set-your-git-identity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Clone the repository
+        6. Set your Git identity
       
     </span>
   </a>
@@ -828,10 +828,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-install-the-recorder-apps-dependencies" class="md-nav__link">
+  <a href="#7-clone-the-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Install the recorder app's dependencies
+        7. Clone the repository
       
     </span>
   </a>
@@ -839,10 +839,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-install-the-wiki-tooling-optional" class="md-nav__link">
+  <a href="#8-install-the-recorder-apps-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. Install the wiki tooling (optional)
+        8. Install the recorder app's dependencies
       
     </span>
   </a>
@@ -850,10 +850,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-set-a-static-ip" class="md-nav__link">
+  <a href="#9-install-the-wiki-tooling-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9. Set a static IP
+        9. Install the wiki tooling (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-set-a-static-ip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Set a static IP
       
     </span>
   </a>
@@ -1336,10 +1347,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-set-your-git-identity" class="md-nav__link">
+  <a href="#5-generate-a-read-only-key-for-the-recording-rigs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Set your Git identity
+        5. Generate a read-only key for the recording rigs
       
     </span>
   </a>
@@ -1347,10 +1358,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-clone-the-repository" class="md-nav__link">
+  <a href="#6-set-your-git-identity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Clone the repository
+        6. Set your Git identity
       
     </span>
   </a>
@@ -1358,10 +1369,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-install-the-recorder-apps-dependencies" class="md-nav__link">
+  <a href="#7-clone-the-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. Install the recorder app's dependencies
+        7. Clone the repository
       
     </span>
   </a>
@@ -1369,10 +1380,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-install-the-wiki-tooling-optional" class="md-nav__link">
+  <a href="#8-install-the-recorder-apps-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. Install the wiki tooling (optional)
+        8. Install the recorder app's dependencies
       
     </span>
   </a>
@@ -1380,10 +1391,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-set-a-static-ip" class="md-nav__link">
+  <a href="#9-install-the-wiki-tooling-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        9. Set a static IP
+        9. Install the wiki tooling (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-set-a-static-ip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Set a static IP
       
     </span>
   </a>
@@ -1428,7 +1450,7 @@
 works, go to <a href="../add_pi/">Add a new Pi</a>.</p>
 <p><strong>Replacing an existing dev Pi?</strong> Use
 <a href="../replace_dev_pi/">Replace the dev Pi</a> instead. Following this page
-would generate a new SSH key that none of the rigs recognise.</p>
+would generate a new SSH key that none of the rigs recognize.</p>
 </div>
 <p>The dev Pi is where code is written and from where all rigs are updated. It is
 the only machine that pushes to GitHub.</p>
@@ -1518,22 +1540,55 @@ password each time.</p>
 means the key was not accepted — check the <code>~/.ssh/config</code> above and that the
 deploy key was saved.</p>
 <hr />
-<h2 id="5-set-your-git-identity">5. Set your Git identity<a class="headerlink" href="#5-set-your-git-identity" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w">  </span><span class="s2">&quot;Your Name&quot;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">&quot;you@example.com&quot;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>pull.rebase<span class="w"> </span><span class="nb">false</span>
+<h2 id="5-generate-a-read-only-key-for-the-recording-rigs">5. Generate a read-only key for the recording rigs<a class="headerlink" href="#5-generate-a-read-only-key-for-the-recording-rigs" title="Permanent link">&para;</a></h2>
+<div class="admonition info">
+<p class="admonition-title">Different from the key above</p>
+<p>The key in steps 3–4 belongs to the dev Pi alone and has <strong>write access</strong> —
+it must never be copied anywhere else. Every recording rig also needs to
+reach GitHub, since bootstrapping clones the repo <strong>on the rig itself</strong>,
+not on the dev Pi. A second, <strong>read-only</strong> key is generated once here and
+distributed to every rig automatically by <code>bootstrap.yml</code>.</p>
+</div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/ansible
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>files
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>ssh-keygen<span class="w"> </span>-t<span class="w"> </span>ed25519<span class="w"> </span>-f<span class="w"> </span>files/github_deploy_ro<span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;rig read-only&quot;</span><span class="w"> </span>-N<span class="w"> </span><span class="s2">&quot;&quot;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>cat<span class="w"> </span>files/github_deploy_ro.pub
+</code></pre></div>
+<p>Add it on GitHub the same way as before, but <strong>leave "Allow write access"
+unticked</strong>:</p>
+<p><strong>Repository → Settings → Deploy keys → Add deploy key</strong></p>
+<ul>
+<li>Title: <code>rig-readonly</code></li>
+<li>Key: paste it</li>
+<li>Leave write access <strong>off</strong></li>
+</ul>
+<p>This key lives at <code>ansible/files/github_deploy_ro</code> and is never committed —
+<code>bootstrap.yml</code> copies it onto each rig over the SSH connection Ansible
+already has, the same way it copies the unit config. You only do this once;
+every current and future rig picks it up automatically the next time it's
+bootstrapped.</p>
+<div class="admonition warning">
+<p class="admonition-title">Back this up like the SSH key and host_vars</p>
+<p>It exists only in <code>ansible/files/</code> on the dev Pi. See the
+<a href="../../reference/handover/">handover checklist</a>.</p>
+</div>
+<hr />
+<h2 id="6-set-your-git-identity">6. Set your Git identity<a class="headerlink" href="#6-set-your-git-identity" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w">  </span><span class="s2">&quot;Your Name&quot;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">&quot;you@example.com&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>pull.rebase<span class="w"> </span><span class="nb">false</span>
 </code></pre></div>
 <p>Without the first two, commits are refused. The third sets merge as the default
 strategy so <code>git pull</code> does not stop to ask.</p>
 <hr />
-<h2 id="6-clone-the-repository">6. Clone the repository<a class="headerlink" href="#6-clone-the-repository" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
+<h2 id="7-clone-the-repository">7. Clone the repository<a class="headerlink" href="#7-clone-the-repository" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>clone<span class="w"> </span>git@github.com:StefanMPopp/RPi_recording.git<span class="w"> </span>~/RPi_recording
 </code></pre></div>
 <hr />
-<h2 id="7-install-the-recorder-apps-dependencies">7. Install the recorder app's dependencies<a class="headerlink" href="#7-install-the-recorder-apps-dependencies" title="Permanent link">&para;</a></h2>
+<h2 id="8-install-the-recorder-apps-dependencies">8. Install the recorder app's dependencies<a class="headerlink" href="#8-install-the-recorder-apps-dependencies" title="Permanent link">&para;</a></h2>
 <p>Even on the dev Pi, so it can be tested locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyqt6<span class="w"> </span>python3-picamera2<span class="w"> </span>python3-opencv
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>pip<span class="w"> </span>install<span class="w"> </span>pyyaml<span class="w"> </span>--break-system-packages
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pyqt6<span class="w"> </span>python3-picamera2<span class="w"> </span>python3-opencv
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>pip<span class="w"> </span>install<span class="w"> </span>pyyaml<span class="w"> </span>--break-system-packages
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Why apt rather than pip for the big three</p>
@@ -1544,22 +1599,22 @@ have prebuilt ARM packages in apt that avoid a very long compile. Only
 here — it bypasses a warning aimed at protecting system Python.</p>
 </div>
 <p>Check it runs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>python3<span class="w"> </span>recorder_app/main.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python3<span class="w"> </span>recorder_app/main.py
 </code></pre></div>
 <hr />
-<h2 id="8-install-the-wiki-tooling-optional">8. Install the wiki tooling (optional)<a class="headerlink" href="#8-install-the-wiki-tooling-optional" title="Permanent link">&para;</a></h2>
+<h2 id="9-install-the-wiki-tooling-optional">9. Install the wiki tooling (optional)<a class="headerlink" href="#9-install-the-wiki-tooling-optional" title="Permanent link">&para;</a></h2>
 <p>To edit and publish these pages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>--break-system-packages
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export PATH=&quot;$HOME/.local/bin:$PATH&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">source</span><span class="w"> </span>~/.bashrc
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs<span class="w"> </span>mkdocs-material<span class="w"> </span>--break-system-packages
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;export PATH=&quot;$HOME/.local/bin:$PATH&quot;&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">source</span><span class="w"> </span>~/.bashrc
 </code></pre></div>
 <p>Preview locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/wiki
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>mkdocs<span class="w"> </span>serve<span class="w">      </span><span class="c1"># then open http://localhost:8000</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">cd</span><span class="w"> </span>~/RPi_recording/wiki
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>mkdocs<span class="w"> </span>serve<span class="w">      </span><span class="c1"># then open http://localhost:8000</span>
 </code></pre></div>
 <p>Publish:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mkdocs<span class="w"> </span>gh-deploy
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>mkdocs<span class="w"> </span>gh-deploy
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">How gh-deploy works</p>
@@ -1570,7 +1625,7 @@ Markdown lives on <code>main</code>; <code>gh-pages</code> is managed entirely b
 folder <code>/ (root)</code>.</p>
 </div>
 <hr />
-<h2 id="9-set-a-static-ip">9. Set a static IP<a class="headerlink" href="#9-set-a-static-ip" title="Permanent link">&para;</a></h2>
+<h2 id="10-set-a-static-ip">10. Set a static IP<a class="headerlink" href="#10-set-a-static-ip" title="Permanent link">&para;</a></h2>
 <p>Reserve an address for the dev Pi in your router's admin panel, the same way as
 for the rigs. Suggested: <code>192.168.50.100</code>.</p>
 <hr />
