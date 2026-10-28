@@ -27,7 +27,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore    import Qt, QTimer, pyqtSignal, QThread, QPoint, QSize
-from PyQt6.QtGui     import QImage, QPixmap, QFont, QColor, QPalette, QAction, QCursor
+from PyQt6.QtGui     import (QImage, QPixmap, QFont, QColor, QPalette, QAction, QCursor,
+                             QPainter, QPen)
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton,
     QHBoxLayout, QVBoxLayout, QGridLayout, QSplitter,
@@ -531,22 +532,29 @@ class PreviewWidget(QLabel):
     Displays numpy frames from the camera preview stream.
 
     Mouse controls:
-      Ctrl + scroll   zoom in/out, centerd on the cursor
+      Ctrl + scroll   zoom in/out, centered on the cursor
       scroll          pan up/down   (when zoomed in)
       Shift + scroll  pan left/right (when zoomed in)
+      drag            move the recording crop, or resize it by an edge
 
     The view is described by a zoom factor and a center point in normalized
     frame coordinates. The center is clamped so the visible crop can never
     extend past the frame edge — clamping the center rather than the crop
     is what prevents the view from jumping when you pan into a corner.
+
+    The recording crop, when set, is drawn as a frame with everything outside
+    it dimmed. It is held in normalized frame coordinates; dragging emits
+    crop_dragged with the new rectangle, and the window decides what to keep.
     """
 
     zoom_changed = pyqtSignal(float)
+    crop_dragged = pyqtSignal(float, float, float, float)   # x, y, width, height
 
     _MIN_ZOOM  = 1.0
     _MAX_ZOOM  = 12.0
     _ZOOM_STEP = 1.15
     _PAN_STEP  = 0.06     # fraction of the visible width/height per scroll notch
+    _EDGE_GRAB_PX = 8     # how close to a crop edge a press resizes rather than moves
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -563,6 +571,17 @@ class PreviewWidget(QLabel):
         self._center_x      = 0.5    # normalized center of the visible region
         self._center_y      = 0.5
         self._current_frame: np.ndarray | None = None
+
+        # Recording crop overlay, normalized (x, y, width, height), or None
+        self._crop_rect: tuple[float, float, float, float] | None = None
+        self._crop_editable = True
+        # Visible part of the frame (normalized x, y, width, height) and the
+        # size of the pixmap showing it, from the last render; used to map
+        # mouse positions onto the frame
+        self._view_rect = (0.0, 0.0, 1.0, 1.0)
+        self._pixmap_size = (0, 0)
+        self._drag: dict | None = None
+        self.setMouseTracking(True)
 
     # ── Frame ingestion ────────────────────────────────────────────────────────
 
@@ -583,6 +602,7 @@ class PreviewWidget(QLabel):
             frame = frame[:, :, :3]
 
         frame_height, frame_width = frame.shape[:2]
+        self._view_rect = (0.0, 0.0, 1.0, 1.0)
 
         if self._zoom_factor > 1.0:
             crop_width  = max(1, int(frame_width  / self._zoom_factor))
@@ -593,6 +613,8 @@ class PreviewWidget(QLabel):
             left = max(0, min(left, frame_width  - crop_width))
             top  = max(0, min(top,  frame_height - crop_height))
             frame = frame[top:top + crop_height, left:left + crop_width]
+            self._view_rect = (left / frame_width, top / frame_height,
+                               crop_width / frame_width, crop_height / frame_height)
 
         rgb_frame      = np.ascontiguousarray(frame)
         height, width, channels = rgb_frame.shape
@@ -607,7 +629,127 @@ class PreviewWidget(QLabel):
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation,
         )
+        self._pixmap_size = (pixmap.width(), pixmap.height())
+        if self._crop_rect is not None:
+            self._paint_crop(pixmap)
         self.setPixmap(pixmap)
+
+    # ── Recording crop overlay ─────────────────────────────────────────────────
+
+    def set_crop_overlay(self, rect: tuple[float, float, float, float] | None) -> None:
+        """Show this normalized crop rectangle, or nothing for None."""
+        self._crop_rect = rect
+        self._render()
+
+    def set_crop_editable(self, editable: bool) -> None:
+        """Allow or forbid dragging the crop (it is fixed while recording)."""
+        self._crop_editable = editable
+        self._drag = None
+        self.unsetCursor()
+
+    def _crop_in_pixmap(self) -> tuple[float, float, float, float]:
+        """The crop rectangle in pixmap pixels: left, top, right, bottom."""
+        view_x, view_y, view_width, view_height = self._view_rect
+        pixmap_width, pixmap_height = self._pixmap_size
+        x, y, width, height = self._crop_rect
+        return ((x - view_x) / view_width * pixmap_width,
+                (y - view_y) / view_height * pixmap_height,
+                (x + width - view_x) / view_width * pixmap_width,
+                (y + height - view_y) / view_height * pixmap_height)
+
+    def _paint_crop(self, pixmap: QPixmap) -> None:
+        left, top, right, bottom = self._crop_in_pixmap()
+        pixmap_width, pixmap_height = self._pixmap_size
+        painter = QPainter(pixmap)
+        shade = QColor(0, 0, 0, 150)
+        # Four bands around the crop, clipped to the pixmap by the painter
+        painter.fillRect(0, 0, pixmap_width, max(0, int(top)), shade)
+        painter.fillRect(0, int(bottom), pixmap_width, pixmap_height, shade)
+        painter.fillRect(0, int(top), max(0, int(left)), int(bottom - top), shade)
+        painter.fillRect(int(right), int(top), pixmap_width, int(bottom - top), shade)
+        painter.setPen(QPen(QColor(COLOR["accent"]), 2))
+        painter.drawRect(int(left), int(top), int(right - left), int(bottom - top))
+        painter.end()
+
+    def _to_pixmap(self, position) -> tuple[float, float]:
+        """Widget coordinates -> pixmap coordinates (the pixmap is centered)."""
+        pixmap_width, pixmap_height = self._pixmap_size
+        return (position.x() - (self.width() - pixmap_width) / 2,
+                position.y() - (self.height() - pixmap_height) / 2)
+
+    def _crop_hit(self, position) -> str | None:
+        """
+        What a press at this widget position would grab: "move", or the edges
+        to resize ("top", "bottom-left", ...), or None if it misses the crop.
+        """
+        if self._crop_rect is None or not self._crop_editable or not self._pixmap_size[0]:
+            return None
+        x, y = self._to_pixmap(position)
+        left, top, right, bottom = self._crop_in_pixmap()
+        grab = self._EDGE_GRAB_PX
+        if not (left - grab <= x <= right + grab and top - grab <= y <= bottom + grab):
+            return None
+        vertical   = "top" if abs(y - top) <= grab else "bottom" if abs(y - bottom) <= grab else ""
+        horizontal = "left" if abs(x - left) <= grab else "right" if abs(x - right) <= grab else ""
+        edges = "-".join(part for part in (vertical, horizontal) if part)
+        return edges or "move"
+
+    _CURSORS = {
+        "move": Qt.CursorShape.SizeAllCursor,
+        "top": Qt.CursorShape.SizeVerCursor, "bottom": Qt.CursorShape.SizeVerCursor,
+        "left": Qt.CursorShape.SizeHorCursor, "right": Qt.CursorShape.SizeHorCursor,
+        "top-left": Qt.CursorShape.SizeFDiagCursor, "bottom-right": Qt.CursorShape.SizeFDiagCursor,
+        "top-right": Qt.CursorShape.SizeBDiagCursor, "bottom-left": Qt.CursorShape.SizeBDiagCursor,
+    }
+
+    def mousePressEvent(self, event) -> None:
+        hit = self._crop_hit(event.position())
+        if hit is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._drag = {"what": hit, "start": self._to_pixmap(event.position()),
+                          "rect": self._crop_rect}
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._drag is None:
+            hit = self._crop_hit(event.position())
+            if hit is None:
+                self.unsetCursor()
+            else:
+                self.setCursor(self._CURSORS[hit])
+            return super().mouseMoveEvent(event)
+
+        # Pointer movement in normalized frame units
+        x, y = self._to_pixmap(event.position())
+        start_x, start_y = self._drag["start"]
+        _, _, view_width, view_height = self._view_rect
+        pixmap_width, pixmap_height = self._pixmap_size
+        dx = (x - start_x) / pixmap_width  * view_width
+        dy = (y - start_y) / pixmap_height * view_height
+
+        left, top, width, height = self._drag["rect"]
+        right, bottom = left + width, top + height
+        what = self._drag["what"]
+        if what == "move":
+            # Moving keeps the size; the crop stops at the frame edge
+            left = min(max(0.0, left + dx), 1.0 - width)
+            top  = min(max(0.0, top  + dy), 1.0 - height)
+            right, bottom = left + width, top + height
+        else:
+            if "top"    in what: top    = min(max(0.0, top    + dy), bottom)
+            if "bottom" in what: bottom = max(min(1.0, bottom + dy), top)
+            if "left"   in what: left   = min(max(0.0, left   + dx), right)
+            if "right"  in what: right  = max(min(1.0, right  + dx), left)
+        self.crop_dragged.emit(left, top, right - left, bottom - top)
+        event.accept()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self._drag is not None:
+            self._drag = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
     def resizeEvent(self, event) -> None:
         # Re-render at the new widget size so the frame refits immediately
@@ -701,7 +843,15 @@ class PreviewWidget(QLabel):
 # Capacity table — measured max fps and recording time, one row per format
 # =============================================================================
 
-LIMIT_NAMES = {"camera": "camera", "encoding": "encoding", "SD card": "SD card"}
+LIMIT_NAMES = {"sensor": "sensor", "CPU": "CPU", "encoding": "encoding", "SD card": "SD card"}
+
+
+def _describe_frame(sensor_mode, frame_size: tuple[int, int]) -> str:
+    """'4056×3040', or '4056×256 crop of 4056×3040' when cropped."""
+    mode_size = f"{sensor_mode.width}×{sensor_mode.height}"
+    if tuple(frame_size) == (sensor_mode.width, sensor_mode.height):
+        return mode_size
+    return f"{frame_size[0]}×{frame_size[1]} crop of {mode_size}"
 
 
 def _format_minutes(minutes) -> str:
@@ -717,8 +867,8 @@ _CAPACITY_COLUMN_WIDTHS = (20, 9, 12, 10, 14)
 CAPACITY_TABLE_WIDTH    = sum(_CAPACITY_COLUMN_WIDTHS)
 
 
-def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
-                          measurements: dict, write_speed_mbs,
+def _build_capacity_table(sensor_mode, frame_size: tuple[int, int], channels: int,
+                          selected_fps: float, measurements: dict, write_speed_mbs,
                           free_space_gb) -> str:
     """
     One table for the current resolution and color mode: for every format,
@@ -730,12 +880,12 @@ def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
     measurements on this machine; nothing is estimated.
     """
     color_name = "grayscale" if channels == 1 else "color"
-    heading = (f"Measured capacity — {sensor_mode.width}×{sensor_mode.height}, "
+    heading = (f"Measured capacity — {_describe_frame(sensor_mode, frame_size)}, "
                f"{color_name}")
 
     if not measurements:
         return (f"{heading}\n\n"
-                f"Not measured yet for this resolution and color mode.\n"
+                f"Not measured yet for this frame size and color mode.\n"
                 f"Settings → Measure maximum fps  (about 25 s)")
 
     widths = _CAPACITY_COLUMN_WIDTHS
@@ -771,7 +921,9 @@ def _build_capacity_table(sensor_mode, channels: int, selected_fps: float,
     else:
         notes.append("SD card speed not measured, so it is not counted as a limit "
                      "— Settings → Recalibrate write speed.")
-    notes.append(f"H.264 here: {h264_encoder_note(sensor_mode.width, sensor_mode.height, channels)}")
+    notes.append("Limited by: sensor = the sensor mode's maximum fps; CPU = capture "
+                 "fell behind while encoding shared the processor.")
+    notes.append(f"H.264 here: {h264_encoder_note(frame_size[0], frame_size[1], channels)}")
     # Wrapped to the table's width, so the popup and the measurement report
     # are no wider than the table itself
     lines.extend(textwrap.fill(note, table_width) for note in notes)
@@ -801,6 +953,11 @@ class MainWindow(QMainWindow):
         # survives mode changes correctly. None = not calibrated.
         self._full_fov_width_cm: float | None = None
 
+        # Recording crop in FULL-SENSOR pixels (x, y, width, height), so it
+        # stays on the same part of the scene across sensor modes. Kept while
+        # the crop is switched off, so switching it on again restores it.
+        self._crop_sensor: tuple[int, int, int, int] | None = None
+
         # Recording state
         self._session: RecordingSession | None = None
         self._is_finishing = False
@@ -828,6 +985,7 @@ class MainWindow(QMainWindow):
 
         # Connect camera frames to preview widget via Qt signal (thread-safe)
         self.frame_ready.connect(self._preview_widget.update_frame)
+        self._preview_widget.crop_dragged.connect(self._on_crop_dragged)
 
     # =========================================================================
     # Menu bar
@@ -1061,6 +1219,69 @@ class MainWindow(QMainWindow):
         color_row.addWidget(self._color_info_btn)
         color_row.addStretch()
         layout.addLayout(color_row, row, 1)
+        row += 1
+
+        # Crop — record only part of the frame
+        layout.addWidget(self._dim_label("Crop"), row, 0)
+        crop_row = QHBoxLayout()
+        crop_row.setSpacing(6)
+        self._crop_check = QCheckBox("Record only part of the frame")
+        self._crop_check.toggled.connect(self._on_crop_toggled)
+        self._crop_info_btn = InfoButton(
+            "Records only the region inside the frame on the preview.\n"
+            "Drag it to move it, or drag an edge to resize it.\n\n"
+            "Copying, encoding and writing all scale with the pixels\n"
+            "recorded, so a thin strip reaches much higher fps than\n"
+            "the full frame — up to the sensor mode's max, not beyond.\n\n"
+            "Crops up to 1920 px wide use the hardware H.264 encoder.\n"
+            "The crop is kept when the sensor mode changes: it stays on\n"
+            "the same part of the scene. Measure maximum fps again for\n"
+            "each new crop size."
+        )
+        crop_row.addWidget(self._crop_check)
+        crop_row.addWidget(self._crop_info_btn)
+        crop_row.addStretch()
+        layout.addLayout(crop_row, row, 1)
+        row += 1
+
+        self._crop_widget = QWidget()
+        crop_grid = QGridLayout(self._crop_widget)
+        crop_grid.setContentsMargins(0, 0, 0, 0)
+        crop_grid.setHorizontalSpacing(6)
+        crop_grid.setVerticalSpacing(4)
+
+        def crop_spin() -> QSpinBox:
+            spin = QSpinBox()
+            spin.setSingleStep(2)
+            spin.setFixedWidth(72)
+            spin.valueChanged.connect(self._on_crop_spin_changed)
+            return spin
+
+        self._crop_top_spin    = crop_spin()
+        self._crop_height_spin = crop_spin()
+        self._crop_left_spin   = crop_spin()
+        self._crop_width_spin  = crop_spin()
+        for grid_row, grid_col, text, spin in (
+            (0, 0, "Top",  self._crop_top_spin),  (0, 2, "Height", self._crop_height_spin),
+            (1, 0, "Left", self._crop_left_spin), (1, 2, "Width",  self._crop_width_spin),
+        ):
+            field_label = QLabel(text)
+            field_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 12px;")
+            crop_grid.addWidget(field_label, grid_row, grid_col)
+            crop_grid.addWidget(spin, grid_row, grid_col + 1)
+        crop_grid.setColumnStretch(4, 1)
+        size_row = QHBoxLayout()
+        self._crop_size_label = QLabel("")
+        self._crop_size_label.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 11px;")
+        self._crop_full_width_button = QPushButton("Full width")
+        self._crop_full_width_button.setStyleSheet("font-size: 11px; padding: 2px 8px;")
+        self._crop_full_width_button.clicked.connect(self._on_crop_full_width)
+        size_row.addWidget(self._crop_size_label)
+        size_row.addStretch()
+        size_row.addWidget(self._crop_full_width_button)
+        crop_grid.addLayout(size_row, 2, 0, 1, 5)
+        self._crop_widget.setVisible(False)
+        layout.addWidget(self._crop_widget, row, 1)
         row += 1
 
         # Show preview toggle
@@ -1553,14 +1774,17 @@ class MainWindow(QMainWindow):
         it assumed the SD card was always the limit, while at high resolution
         the camera or the encoder usually is — which no estimate can predict.
         """
+        if not hasattr(self, "_crop_check"):
+            return      # still building the window
         mode         = self._current_sensor_mode()
+        frame_size   = self._recorded_frame_size()
         selected_fps = self._fps_spin.value()
         channels     = self._current_channels()
         write_speed  = self._app_config["hardware"].get("sd_write_speed_mbs")
-        measurements = self._measurements_for(mode, channels)
+        measurements = self._measurements_for(mode, frame_size, channels)
 
         self._format_info_btn.set_text(_build_capacity_table(
-            mode, channels, selected_fps, measurements, write_speed,
+            mode, frame_size, channels, selected_fps, measurements, write_speed,
             self._free_space_gb,
         ))
 
@@ -1585,12 +1809,12 @@ class MainWindow(QMainWindow):
         self._headroom_label.setText(text)
         self._headroom_label.setStyleSheet(f"color: {color}; font-size: 12px;")
 
-    def _measurements_for(self, mode, channels: int) -> dict:
-        """Stored measurements, by format key, at this resolution and color mode."""
+    def _measurements_for(self, mode, frame_size: tuple[int, int], channels: int) -> dict:
+        """Stored measurements, by format key, for this readout, frame size and color mode."""
         store = self._app_config.get("throughput", {}) or {}
         found = {}
         for output_format in OUTPUT_FORMATS:
-            key = throughput_cache_key(mode.width, mode.height, channels, output_format)
+            key = throughput_cache_key(mode, frame_size, channels, output_format)
             if key in store and "pipeline_fps" in store[key]:
                 found[output_format.key] = store[key]
         return found
@@ -1631,6 +1855,11 @@ class MainWindow(QMainWindow):
         # the stored full-sensor calibration so it stays physically correct
         if hasattr(self, "_scale_px_radio"):
             self._rescale_for_new_sensor_mode()
+
+        # The crop is stored in sensor pixels, so this re-expresses the same
+        # region in the new mode's pixels
+        if hasattr(self, "_crop_check"):
+            self._sync_crop_ui()
 
         self._refresh_headroom()
 
@@ -1762,6 +1991,100 @@ class MainWindow(QMainWindow):
                 return channels
         return 3
 
+    # ── Recording crop ─────────────────────────────────────────────────────────
+
+    def _current_crop(self) -> tuple[int, int, int, int] | None:
+        """The crop in pixels of the current sensor mode, or None if off."""
+        if not self._crop_check.isChecked() or self._crop_sensor is None:
+            return None
+        return self._current_sensor_mode().crop_from_sensor(self._crop_sensor)
+
+    def _recorded_frame_size(self) -> tuple[int, int]:
+        crop = self._current_crop()
+        if crop is not None:
+            return crop[2], crop[3]
+        mode = self._current_sensor_mode()
+        return mode.width, mode.height
+
+    def _default_crop(self, mode) -> tuple[int, int, int, int]:
+        """A full-width strip, a sixth of the frame tall, across the middle."""
+        height = max(64, mode.height // 6) & ~1
+        return mode.fit_crop(0, (mode.height - height) // 2, mode.width, height)
+
+    def _set_crop(self, crop: tuple[int, int, int, int] | None) -> None:
+        """Adopt a mode-pixel crop (already fitted), or ignore None."""
+        if crop is None:
+            return
+        self._crop_sensor = self._current_sensor_mode().crop_to_sensor(crop)
+        self._sync_crop_ui()
+
+    def _sync_crop_ui(self) -> None:
+        """Show the stored crop for the current mode: fields, size line, preview frame."""
+        mode = self._current_sensor_mode()
+        enabled = self._crop_check.isChecked()
+        self._crop_widget.setVisible(enabled)
+        if not enabled:
+            self._preview_widget.set_crop_overlay(None)
+            self._refresh_headroom()
+            return
+
+        crop = self._current_crop()
+        if crop is None:
+            # Nothing stored yet, or the stored region is outside what this
+            # mode sees
+            crop = self._default_crop(mode)
+            self._crop_sensor = mode.crop_to_sensor(crop)
+        x, y, width, height = crop
+
+        for spin, maximum, value in (
+            (self._crop_left_spin,   mode.width,  x),
+            (self._crop_top_spin,    mode.height, y),
+            (self._crop_width_spin,  mode.width,  width),
+            (self._crop_height_spin, mode.height, height),
+        ):
+            spin.blockSignals(True)
+            spin.setRange(0, maximum)
+            spin.setValue(value)
+            spin.blockSignals(False)
+
+        share = 100.0 * width * height / (mode.width * mode.height)
+        self._crop_size_label.setText(
+            f"{width} × {height} px · {share:.0f}% of frame"
+        )
+        self._preview_widget.set_crop_overlay(
+            (x / mode.width, y / mode.height, width / mode.width, height / mode.height)
+        )
+        self._refresh_headroom()
+
+    def _on_crop_toggled(self, _checked: bool) -> None:
+        self._sync_crop_ui()
+
+    def _on_crop_spin_changed(self, _value: int) -> None:
+        mode = self._current_sensor_mode()
+        x, y = self._crop_left_spin.value(), self._crop_top_spin.value()
+        width, height = self._crop_width_spin.value(), self._crop_height_spin.value()
+        # Changing the position keeps the size and stops at the frame edge;
+        # changing the size keeps the position unless the edge forces a move
+        if self.sender() in (self._crop_left_spin, self._crop_top_spin):
+            x, y = min(x, mode.width - width), min(y, mode.height - height)
+        else:
+            x, y = min(x, max(0, mode.width - width)), min(y, max(0, mode.height - height))
+        fitted = mode.fit_crop(x, y, width, height)
+        if fitted is None:
+            self._sync_crop_ui()     # too small: show the last valid crop again
+        else:
+            self._set_crop(fitted)
+
+    def _on_crop_full_width(self) -> None:
+        mode = self._current_sensor_mode()
+        crop = self._current_crop() or self._default_crop(mode)
+        self._set_crop(mode.fit_crop(0, crop[1], mode.width, crop[3]))
+
+    def _on_crop_dragged(self, x: float, y: float, width: float, height: float) -> None:
+        mode = self._current_sensor_mode()
+        self._set_crop(mode.fit_crop(round(x * mode.width), round(y * mode.height),
+                                     round(width * mode.width), round(height * mode.height)))
+
     def _on_format_changed(self, _index: int) -> None:
         self._refresh_headroom()
         if self._current_format().is_image_stack:
@@ -1801,6 +2124,8 @@ class MainWindow(QMainWindow):
     def _collect_recording_settings(self) -> RecordingSettings:
         """Assemble a RecordingSettings object from the current form state."""
         mode = self._current_sensor_mode()
+        crop = self._current_crop()
+        frame_width, frame_height = self._recorded_frame_size()
 
         px_per_cm      = self._px_per_cm_spin.value()
         frame_width_cm = self._frame_width_spin.value()
@@ -1823,14 +2148,19 @@ class MainWindow(QMainWindow):
             save_dir     = Path(self._save_dir_edit.text()).expanduser(),
             file_name    = self._file_name_edit.text().strip() or "recording",
             output_format = self._current_format(),
-            frame_width  = mode.width,
-            frame_height = mode.height,
+            frame_width  = frame_width,
+            frame_height = frame_height,
             fps          = self._fps_spin.value(),
             channels     = self._current_channels(),
             duration_s   = None if self._duration_check.isChecked()
                            else float(self._duration_spin.value()),
             fov_fraction = mode.fov_fraction_width,
             metadata     = metadata_values,
+            mode_width   = mode.width,
+            mode_height  = mode.height,
+            bit_depth    = mode.bit_depth,
+            crop         = crop,
+            sensor_crop  = mode.crop_to_sensor(crop) if crop else None,
         )
 
     def _start_recording(self) -> None:
@@ -1934,6 +2264,7 @@ class MainWindow(QMainWindow):
 
         self._recording_settings = settings
         self._is_recording       = True
+        self._preview_widget.set_crop_editable(False)
 
         self._setup_panel.setVisible(False)
         self._status_panel.setVisible(True)
@@ -2084,6 +2415,7 @@ class MainWindow(QMainWindow):
             pass
         self._is_recording = False
         self._is_finishing = False
+        self._preview_widget.set_crop_editable(True)
         self._setup_panel.setVisible(True)
         self._status_panel.setVisible(False)
         self._warning_label.setText("")
@@ -2176,10 +2508,10 @@ class MainWindow(QMainWindow):
             self._warning_label.setText(
                 f"✖ Capturing at {live_fps:.1f} fps, not the requested "
                 f"{requested_fps:.1f} ({stats.miss_rate_pct:.0f}% of frames missed).\n\n"
-                f"The camera cannot sustain this rate at this resolution. "
-                f"Stop and lower the framerate or the resolution — the video's "
-                f"timestamps will be correct either way, but the file will be "
-                f"shorter than expected."
+                f"Capture cannot keep up with this rate at this frame size. "
+                f"Stop and lower the framerate, or record a smaller crop — the "
+                f"frame times file shows exactly which frames are missing, but "
+                f"the video will be shorter than expected."
             )
             return
 
@@ -2306,12 +2638,14 @@ class MainWindow(QMainWindow):
             return
 
         mode        = self._current_sensor_mode()
+        frame_size  = (settings.frame_width, settings.frame_height)
+        frame_text  = _describe_frame(mode, frame_size)
         color_name = "grayscale" if settings.channels == 1 else "color"
         needs_card  = not self._app_config["hardware"].get("sd_write_speed_mbs")
         proceed = QMessageBox.question(
             self, "Measure maximum fps",
             f"This records each format flat out for about 5 seconds at\n\n"
-            f"    {mode.width} × {mode.height}, {color_name}\n\n"
+            f"    {frame_text}, {color_name}\n\n"
             f"to find the highest frame rate each can sustain"
             + (", after measuring\nthe SD card's write speed (another ~15 s)" if needs_card else "")
             + ".\n\nTest footage goes to a hidden folder in your save directory\n"
@@ -2367,7 +2701,7 @@ class MainWindow(QMainWindow):
 
         store = self._app_config.setdefault("throughput", {})
         for output_format, measurement in results.items():
-            key = throughput_cache_key(mode.width, mode.height, settings.channels, output_format)
+            key = throughput_cache_key(mode, frame_size, settings.channels, output_format)
             store[key] = measurement
         if results:
             save_app_config(self._app_config)
@@ -2391,7 +2725,7 @@ class MainWindow(QMainWindow):
         report.exec()
         self._bottom_status.setText(
             f"Measured {len(results)} of {steps} formats at "
-            f"{mode.width}×{mode.height}, {color_name}"
+            f"{frame_text}, {color_name}"
         )
 
     def _on_recalibrate_write_speed(self) -> None:
@@ -2472,6 +2806,8 @@ class MainWindow(QMainWindow):
                 "sensor_mode": "{0.width}x{0.height}".format(self._current_sensor_mode()),
                 "fps":         self._fps_spin.value(),
                 "color_mode": self._color_combo.currentText(),
+                "crop":       (list(self._crop_sensor)
+                               if self._crop_check.isChecked() and self._crop_sensor else None),
             },
             "metadata": {
                 **self._field_list.get_field_values(),
@@ -2547,6 +2883,15 @@ class MainWindow(QMainWindow):
             color_index = self._color_combo.findText(color_mode)
             if color_index >= 0:
                 self._color_combo.setCurrentIndex(color_index)
+        # The crop is in sensor pixels, so it applies to whichever mode was set
+        if "crop" in cam:
+            saved_crop = cam["crop"]
+            if isinstance(saved_crop, (list, tuple)) and len(saved_crop) == 4:
+                self._crop_sensor = tuple(int(value) for value in saved_crop)
+                self._crop_check.setChecked(True)
+            else:
+                self._crop_check.setChecked(False)
+            self._sync_crop_ui()
 
     # =========================================================================
     # Helpers

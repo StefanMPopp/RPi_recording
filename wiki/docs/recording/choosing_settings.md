@@ -59,6 +59,34 @@ usually the right choice.** It keeps the full field of view and allows up to
 
 ---
 
+## Recording only part of the frame
+
+When only part of the arena matters — a trail, a bridge, a nest entrance —
+tick **Crop** and record just that rectangle. Copying, encoding and writing all
+scale with the pixels recorded, so a thin strip records far faster and smaller
+than the full frame.
+
+Measured on a Pi 4, grayscale, a strip 256 rows tall across the full width:
+
+| Mode | Full frame, fastest format | Strip, every format |
+|---|---|---|
+| 4056 × 3040 | ~4 fps | 17.3 fps (sensor max) |
+| 4056 × 2160 | ~6 fps | 24.3 fps (sensor max) |
+| 2028 × 1520 | ~18 fps | 62–65 fps |
+
+**A crop cannot exceed the sensor mode's maximum fps**: the sensor still reads
+the whole mode, and the crop is taken afterward. For more fps, choose a faster
+mode and crop that. Above about 60 fps the processor becomes the limit, and
+color strips are limited by encoding sooner than grayscale ones.
+
+Crops up to 1920 px wide use the Pi's hardware H.264 encoder even in the
+4056-wide modes.
+
+The crop stays on the same part of the scene when you change sensor mode. A
+mode that sees less of the sensor (1332 × 990) clips it to what it can see.
+
+---
+
 ## Color mode
 
 Use **grayscale** unless the analysis needs color. Tracking works on
@@ -100,9 +128,10 @@ version:
 Every recording is capped by the slowest of three stages, and which one binds
 depends on resolution, color mode **and** format:
 
-| Stage | What it is | Typical when |
+| Limit | What it is | Typical when |
 |---|---|---|
-| **camera** | Sensor readout and image processing | High resolution, fast encoders |
+| **sensor** | The sensor mode's maximum fps | Small frames, or a thin crop |
+| **CPU** | Capture falls behind while encoding shares the processor | High fps with compressed formats |
 | **encoding** | Compressing each frame | MJPEG and compressed stacks at high resolution |
 | **SD card** | Writing the bytes | Uncompressed stacks at high resolution |
 
@@ -113,15 +142,18 @@ maximum fps of every format, what limits it, megabytes per frame, and how long a
 recording fits on the card. The line under the selector summarizes the chosen
 format and turns red if the selected frame rate is above its maximum.
 
-Measurements are stored per resolution and color mode, so switching to an
+Measurements are stored per sensor mode, recorded frame size (see
+[crop](#recording-only-part-of-the-frame)) and color mode, so switching to an
 unmeasured combination shows it as not measured.
 
 ### If the frame rate you need is above the maximum
 
 Read the **Limited by** column — the fix depends on it:
 
-- **camera** — lower the resolution; nothing else helps.
+- **sensor** — choose a faster sensor mode; nothing else helps.
   `2028 × 1520` keeps the full field of view at a quarter of the pixels.
+- **CPU** — record a smaller crop, choose a format that is cheaper to encode
+  (TIFF needs the least CPU), or switch to grayscale.
 - **encoding** — choose a faster format (the table shows which), switch to
   grayscale, or lower the resolution.
 - **SD card** — choose a format with smaller frames, switch to grayscale, or

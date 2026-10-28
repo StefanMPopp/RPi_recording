@@ -135,6 +135,22 @@ Either:
 
 ---
 
+## "The camera stopped sending frames"
+
+The recording or fps measurement ends after 2 s without a frame. There are two
+causes:
+
+- **The Pi ran out of memory.** On a 2 GB Pi, full 4056 × 3040 frames with a
+  browser or other large programs open can leave too little memory, and the
+  whole system stalls. Close other programs, or record a crop or a smaller
+  sensor mode.
+- **A loose camera cable.** Reseat the ribbon cable at both ends with the Pi
+  switched off. If it keeps happening, try another cable.
+
+The next recording restarts the camera, so you can simply try again.
+
+---
+
 ## What to include when reporting a problem
 
 1. Which rig

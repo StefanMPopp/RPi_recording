@@ -40,6 +40,19 @@ def build_metadata(settings, capture_summary: dict) -> dict:
     """
     metadata_dict = settings.metadata or {}
 
+    mode_width  = settings.mode_width  or settings.frame_width
+    mode_height = settings.mode_height or settings.frame_height
+    crop = None
+    if settings.crop is not None:
+        crop = {
+            # Position of the recorded frame inside the sensor mode's frame
+            "x_px": settings.crop[0], "y_px": settings.crop[1],
+            "width_px": settings.crop[2], "height_px": settings.crop[3],
+            # The same region in full-sensor pixels, comparable across modes
+            "sensor_region_px": list(settings.sensor_crop) if settings.sensor_crop else None,
+        }
+    px_per_cm = metadata_dict.get("px_per_cm")
+
     return {
         "experiment": {
             "experimenter": metadata_dict.get("experimenter", "NA"),
@@ -50,8 +63,13 @@ def build_metadata(settings, capture_summary: dict) -> dict:
             "trial":        metadata_dict.get("trial",        "NA"),
         },
         "camera": {
+            # Size of the recorded frames; smaller than the sensor mode when
+            # a crop is set
             "frame_width_px":  settings.frame_width,
             "frame_height_px": settings.frame_height,
+            "sensor_mode":     f"{mode_width}x{mode_height}",
+            "sensor_bit_depth": settings.bit_depth,
+            "crop":            crop,
             "requested_fps":   settings.fps,
             "color_mode":     "grayscale" if settings.channels == 1 else "color",
             "channels":        settings.channels,
@@ -61,8 +79,12 @@ def build_metadata(settings, capture_summary: dict) -> dict:
             "fov_fraction_width": round(settings.fov_fraction, 4),
         },
         "scale": {
-            "px_per_cm":       metadata_dict.get("px_per_cm"),
+            "px_per_cm":       px_per_cm,
+            # Width of the sensor mode's full frame, whether or not it is
+            # cropped; recorded_width_cm is the width of the recorded frames
             "frame_width_cm":  metadata_dict.get("frame_width_cm"),
+            "recorded_width_cm": (round(settings.frame_width / px_per_cm, 2)
+                                  if px_per_cm else None),
             "entered_as":      metadata_dict.get("scale_entered_as"),
         },
         "output": {

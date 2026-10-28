@@ -27,6 +27,7 @@ For a **video** recording, in your chosen save folder:
 ```
 foraging_high-dim_1.avi              ← the footage
 foraging_high-dim_1_metadata.yaml    ← everything about it
+foraging_high-dim_1_frame_times.csv  ← when each frame was taken
 ```
 
 For an **image stack**:
@@ -37,10 +38,17 @@ foraging_high-dim_1/
     foraging_high-dim_1_00002.tiff
     ...
     metadata.yaml
+    frame_times.csv
 ```
 
 Frame numbers are 1-based and zero-padded to five digits, so they sort correctly
 in any file browser or analysis script.
+
+`frame_times.csv` lists each frame's number and `time_s`: when the sensor
+exposed it, in seconds after the first frame. The video file only stores a
+nominal frame rate, so use these times for any speed or duration analysis. A gap
+of two frame intervals means one frame was missed; the metadata counts them
+under `frames_missed`.
 
 ---
 

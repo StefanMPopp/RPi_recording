@@ -22,7 +22,11 @@ The current zoom level is shown at the top right of the preview, with a
 
 The preview is a lower-resolution stream than the recording — it exists to
 check framing and focus, not to judge final image quality. Zoom does not affect
-what is recorded; the full frame is always captured.
+what is recorded.
+
+With **Crop** ticked, the preview shows the recorded region as an amber frame
+and dims everything outside it. Drag inside the frame to move it, or drag an
+edge or corner to resize it. The crop cannot be changed while recording.
 
 ---
 
@@ -41,6 +45,14 @@ losing resolution, and are ideal for slow behaviors or long recordings.
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.
 
+**Crop** — tick **Record only part of the frame** to record just a rectangle
+of it. **Top**, **Height**, **Left** and **Width** are in pixels of the current
+sensor mode; **Full width** stretches the crop across the frame. The line below
+shows the recorded size. A smaller crop records at a higher fps, up to the
+sensor mode's maximum — see
+[recording only part of the frame](choosing_settings.md#recording-only-part-of-the-frame).
+Profiles save the crop.
+
 **Show preview** — untick if the Pi struggles. Displaying the preview costs
 some CPU; disabling it frees that for encoding.
 
@@ -52,7 +64,7 @@ some CPU; disabling it frees that for encoding.
 
 **Format** — the file format. Hover the blue ⓘ for the measured capacity table:
 for every format at the current resolution and color mode, the maximum frame
-rate, what limits it (camera, encoding or SD card), megabytes per frame, and how
+rate, what limits it (sensor, CPU, encoding or SD card), megabytes per frame, and how
 long a recording fits on the card. Empty until you run
 **Settings → Measure maximum fps**. See
 [maximum frame rate](choosing_settings.md#maximum-frame-rate).

@@ -64,6 +64,15 @@ class RecordingSettings:
     duration_s:     float | None     # None = record until stopped
     fov_fraction:   float = 1.0      # fraction of full sensor width this mode sees
     metadata:       dict = field(default_factory=dict)
+    # Sensor mode the frames come from. frame_width/height are the recorded
+    # size, which is smaller than the mode when a crop is set. 0 = same.
+    mode_width:     int = 0
+    mode_height:    int = 0
+    bit_depth:      int = 8
+    # Recorded part of the mode's frame, (x, y, width, height) in mode pixels
+    crop:           tuple[int, int, int, int] | None = None
+    # The same region in full-sensor pixels, for the metadata
+    sensor_crop:    tuple[int, int, int, int] | None = None
 
     # ── Derived paths ──────────────────────────────────────────────────────────
 
@@ -259,6 +268,12 @@ _HARDWARE_H264_CACHE: dict = {}
 # misdiagnose. Checked before probing so the common case needs no subprocess.
 HARDWARE_H264_MAX_WIDTH  = 1920
 HARDWARE_H264_MAX_HEIGHT = 1088     # 1080 rounded up to the macroblock boundary
+
+# Frames larger than this are encoded with slice threading (MJPEG and software
+# H.264), which needs far less memory (see FFmpegVideoWriter._encoder_arguments).
+# 6 MP sits between 2028x1520 (3 MP), where frame threading is faster, and
+# 4056x2160 (8.8 MP).
+SLICE_THREADING_ABOVE_PIXELS = 6_000_000
 
 
 def hardware_h264_available(width: int, height: int, channels: int = 1) -> bool:
@@ -521,9 +536,20 @@ class FFmpegVideoWriter:
                                        settings.channels):
                 return list(_HARDWARE_H264_ARGUMENTS)
             # Slower than MJPEG at high resolution — see h264_encoder_note.
+            # Sliced threads halve libx264's memory on large frames (600 MB
+            # at 4056x3040), for about a tenth of the speed.
+            if settings.frame_width * settings.frame_height > SLICE_THREADING_ABOVE_PIXELS:
+                return list(_SOFTWARE_H264_ARGUMENTS) + ["-x264-params", "sliced-threads=1"]
             return list(_SOFTWARE_H264_ARGUMENTS)
 
-        # MJPEG: -q:v 3 is visually lossless; -threads 0 uses every core
+        # MJPEG: -q:v 3 is visually lossless; -threads 0 uses every core.
+        # ffmpeg's default frame threading keeps several frames per thread,
+        # which at 4056x3040 reached about 1 GB — enough on a 2 GB Pi to stall
+        # the whole system, the camera included. Slice threading needs half
+        # the memory at the same speed for frames this large, but is slower
+        # for smaller ones, so it is used only above the threshold.
+        if settings.frame_width * settings.frame_height > SLICE_THREADING_ABOVE_PIXELS:
+            return ["-c:v", "mjpeg", "-q:v", "3", "-thread_type", "slice", "-threads", "4"]
         return ["-c:v", "mjpeg", "-q:v", "3", "-threads", "0"]
 
     def write(self, frame: np.ndarray, frame_index: int) -> None:
@@ -809,9 +835,16 @@ def measure_format_throughput(
             written_fps   = written / elapsed
 
             # Frames dropped at the queue mean capture outran the writer, so
-            # encoding is the limit. Otherwise the writer kept up and the
-            # camera set the pace.
-            pipeline_limit = "encoding" if dropped > 0 else "camera"
+            # encoding is the limit. Otherwise the writer kept up, and capture
+            # set the pace: either the sensor at its mode's maximum, or the
+            # capture thread falling short of it because the encoders were
+            # using the CPU.
+            if dropped > 0:
+                pipeline_limit = "encoding"
+            elif camera_fps >= sensor_max_fps * 0.95:
+                pipeline_limit = "sensor"
+            else:
+                pipeline_limit = "CPU"
             pipeline_fps   = min(camera_fps, written_fps) if dropped == 0 else written_fps
 
             return {
@@ -903,16 +936,22 @@ def encoder_signature(output_format: OutputFormat) -> str:
     return output_format.key
 
 
-def throughput_cache_key(width: int, height: int, channels: int,
+def throughput_cache_key(mode, frame_size: tuple[int, int], channels: int,
                          output_format: OutputFormat) -> str:
     """
-    Identify one measurable combination.
+    Identify one measurable combination: the sensor readout (mode and bit
+    depth), the recorded frame size if a crop makes it smaller, the color
+    mode and the encoder settings.
 
     Framerate is deliberately absent: the measurement finds the CEILING, which
-    does not depend on the rate selected.
+    does not depend on the rate selected. Nor is the crop's position: only
+    its size affects speed.
     """
-    color = "gray" if channels == 1 else "color"
-    return f"{width}x{height}_{color}_{encoder_signature(output_format)}"
+    color   = "gray" if channels == 1 else "color"
+    readout = f"{mode.width}x{mode.height}@{mode.bit_depth}bit"
+    crop    = ("" if tuple(frame_size) == (mode.width, mode.height)
+               else f"_crop{frame_size[0]}x{frame_size[1]}")
+    return f"{readout}{crop}_{color}_{encoder_signature(output_format)}"
 
 
 def remove_previous_stack_frames(settings: RecordingSettings) -> int:
@@ -1009,9 +1048,9 @@ class RecordingSession:
         self._preview_callback = preview_callback
         self._preview_fps      = preview_fps
         self._frame_times: list[float] = []
-        # Accumulated schedule slippage, used to count missed frames when each
-        # frame runs slightly over budget rather than whole slots being skipped
-        self._slippage_s = 0.0
+        self._first_frame_time: float | None = None
+        # Sensor time of the previous frame received, to spot skipped frames
+        self._previous_exposure: float | None = None
         self._queue: queue.Queue = queue.Queue(maxsize=queue_size)
         self._writer    = None
 
@@ -1034,6 +1073,7 @@ class RecordingSession:
         # camera skips full-color ISP processing entirely rather than
         # capturing color and discarding it afterward — see
         # PiCamera.prepare_for_recording for why this matters.
+        self._camera.set_recording_crop(self._settings.crop)
         self._camera.prepare_for_recording(self._settings.channels)
 
         self._writer         = make_writer(self._settings)
@@ -1137,7 +1177,8 @@ class RecordingSession:
 
     def _write_frame_times(self):
         """
-        Write frame index and capture time to a CSV beside the footage.
+        Write frame index and time to a CSV beside the footage. time_s is when
+        the sensor exposed the frame, in seconds after the first frame.
 
         Kept separate from the metadata YAML because it is one row per frame —
         potentially tens of thousands — and belongs in a format built for that.
@@ -1185,15 +1226,21 @@ class RecordingSession:
 
     def _capture_loop(self) -> None:
         """
-        Grab frames at the target interval and push them onto the queue.
+        Take the frames the camera delivers and push them onto the queue.
+
+        The sensor runs at the recording's frame rate, so the camera sets the
+        pace and this loop only waits for each frame (skipping any that come
+        early, should the sensor run faster). It must not pace itself
+        by sleeping: picamera2 keeps just one finished frame, so a frame that
+        arrives while the loop sleeps past the next one is lost.
 
         Two distinct failure modes are tracked separately:
 
           frames_dropped — the queue was full, so a captured frame was thrown
                            away. The DISK is too slow.
-          frames_missed  — the loop fell behind schedule, so a frame was never
-                           captured at all. The CAMERA or the per-frame work is
-                           too slow for the requested rate.
+          frames_missed  — the sensor exposed a frame this loop never received,
+                           seen as a gap in the sensor timestamps. The per-frame
+                           work, or the CPU, is too slow for the requested rate.
 
         Conflating them hides real problems: a recording can run at half the
         requested rate with zero drops, producing a file whose header claims a
@@ -1201,8 +1248,8 @@ class RecordingSession:
         """
         frame_interval   = 1.0 / self._settings.fps
         preview_interval = 1.0 / self._preview_fps if self._preview_callback else None
-        next_frame_at    = time.perf_counter()
         next_preview_at  = time.perf_counter()
+        previous_kept: float | None = None     # sensor time of the last frame kept
 
         while self._running:
             # Stop automatically once the requested duration has elapsed
@@ -1238,6 +1285,20 @@ class RecordingSession:
                     except Exception:
                         pass    # a preview failure must never stop a recording
 
+            self.stats.elapsed_s = capture_time - (self._start_time or 0.0)
+            self._count_missed_frames(frame_interval)
+
+            # The sensor should already run at the recording's rate. If it runs
+            # faster — its rate not yet applied, or a rate it cannot slow to —
+            # frames closer than one interval to the last one kept are skipped,
+            # so the recording never runs faster than its file header claims.
+            # Sensor timestamps jitter by well under 5%, so at the right rate
+            # every frame is kept.
+            exposed_at = getattr(self._camera, "last_frame_time_s", None) or capture_time
+            if previous_kept is not None and exposed_at - previous_kept < frame_interval * 0.95:
+                continue
+            previous_kept = exposed_at
+
             try:
                 if frame is None:
                     raise queue.Full
@@ -1245,31 +1306,16 @@ class RecordingSession:
                 self.stats.frames_captured += 1
                 # Timestamps are the authoritative timing record: the container
                 # header only stores a nominal rate, which is wrong whenever the
-                # loop could not keep up.
-                self._frame_times.append(capture_time - (self._start_time or capture_time))
+                # loop could not keep up. They are the sensor's own exposure
+                # times, so any delay before this thread received the frame
+                # does not show up as jitter.
+                if self._first_frame_time is None:
+                    self._first_frame_time = exposed_at
+                self._frame_times.append(exposed_at - self._first_frame_time)
             except queue.Full:
                 self.stats.frames_dropped += 1
 
             self.stats.queue_depth = self._queue.qsize()
-            self.stats.elapsed_s   = capture_time - (self._start_time or 0.0)
-
-            # Sleep until the next scheduled frame, correcting for the time the
-            # capture itself took
-            next_frame_at += frame_interval
-            sleep_for = next_frame_at - time.perf_counter()
-            if sleep_for > 0:
-                time.sleep(sleep_for)
-            else:
-                # Behind schedule. Accumulate the slippage rather than counting
-                # only whole missed slots: when every frame runs slightly over
-                # its budget, no single slot is ever fully skipped, yet the rate
-                # still falls short. Counting whole slots alone would report
-                # zero missed frames on a recording running 20% slow.
-                self._slippage_s += -sleep_for
-                while self._slippage_s >= frame_interval:
-                    self.stats.frames_missed += 1
-                    self._slippage_s -= frame_interval
-                next_frame_at = time.perf_counter()
 
         # Capture has ended. Record when, so the reported duration covers the
         # recording rather than also counting the time spent draining the
@@ -1282,6 +1328,22 @@ class RecordingSession:
         self._queue.put(None)
 
     # ── Writer thread ──────────────────────────────────────────────────────────
+
+    def _count_missed_frames(self, frame_interval: float) -> None:
+        """
+        Count frames the sensor exposed but this loop never received, from the
+        gap since the previous frame. A gap of about two frame durations is
+        one missed frame, three is two, and so on.
+        """
+        exposed_at = getattr(self._camera, "last_frame_time_s", None)
+        if exposed_at is None:
+            return
+        if self._previous_exposure is not None:
+            frame_duration = getattr(self._camera, "last_frame_duration_s", None) or frame_interval
+            skipped = round((exposed_at - self._previous_exposure) / frame_duration) - 1
+            if skipped > 0:
+                self.stats.frames_missed += skipped
+        self._previous_exposure = exposed_at
 
     def _writer_loop(self) -> None:
         """

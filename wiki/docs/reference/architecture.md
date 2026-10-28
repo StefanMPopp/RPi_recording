@@ -43,6 +43,18 @@ distorting the frame timing of everything after it. With a queue between them:
 
 - The capture thread keeps precise timing
 - Disk stalls consume queue slack instead of disrupting capture
+
+The capture thread does not pace itself. The sensor runs at the recording's
+frame rate, and the thread simply waits for each frame. picamera2 keeps only
+**one** finished frame, so a thread that slept on its own clock would lose a
+frame whenever it overslept — an earlier version did, losing a few frames per
+second at 60 fps. Frames the thread never received show up as gaps in the
+sensor timestamps, which is how `frames_missed` is counted.
+
+A recording crop is applied in `PiCamera.capture_frame`, while copying the
+frame out of the camera's buffer: only the cropped pixels are read, and the
+writers are opened at the cropped size. The camera and the preview still see
+the full frame.
 - **A full queue is an unambiguous "the disk cannot keep up" signal** — which is
   what gives an honest dropped-frame count rather than an estimate
 
@@ -124,7 +136,9 @@ report roughly 1/(capture + encode) where a recording reaches
 by up to half.
 
 Frames dropped at the queue mean the writer could not keep up (limit:
-**encoding**); otherwise the camera set the pace (limit: **camera**).
+**encoding**). Otherwise capture set the pace: at 95% or more of the sensor
+mode's maximum the limit is the **sensor**; below that, the capture thread fell
+behind because the encoders were using the processor (limit: **CPU**).
 
 The SD card is deliberately not measured in that run: a few seconds of writes
 land in the operating system's RAM cache. Instead `record.capacity_for()`

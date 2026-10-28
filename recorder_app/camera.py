@@ -60,8 +60,9 @@ class SensorMode:
     This distinction matters for spatial calibration: px_per_cm depends on
     pixel count, but the physical width of the scene depends on the crop.
 
-    Note: `max_fps` is the MAXIMUM framerate this mode supports. Any lower
-    framerate can be requested via the camera's FrameRate control.
+    Note: `max_fps` is the MAXIMUM framerate this mode supports at its
+    `bit_depth`. Any lower framerate can be requested via the camera's
+    FrameRate control.
     """
     index:       int
     width:       int
@@ -72,6 +73,8 @@ class SensorMode:
     crop_height: int = 0
     sensor_full_width:  int = 0
     sensor_full_height: int = 0
+    crop_x:      int = 0     # sensor pixel where the region read starts
+    crop_y:      int = 0
     display_label: str = field(init=False)
 
     def __post_init__(self):
@@ -95,6 +98,55 @@ class SensorMode:
     @property
     def is_full_fov(self) -> bool:
         return self.fov_fraction_width >= 0.99
+
+    # ── Recording crop geometry ────────────────────────────────────────────────
+    # A crop is (x, y, width, height). In mode pixels it says which part of
+    # this mode's frame is recorded; in sensor pixels it names the same
+    # physical region independently of the mode, which is how it is stored.
+
+    def _sensor_pixels_per_mode_pixel(self) -> tuple[float, float]:
+        if self.crop_width and self.crop_height:
+            return self.crop_width / self.width, self.crop_height / self.height
+        return 1.0, 1.0
+
+    def crop_to_sensor(self, crop: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+        """Mode-pixel crop -> the sensor-pixel region it covers."""
+        scale_x, scale_y = self._sensor_pixels_per_mode_pixel()
+        x, y, width, height = crop
+        return (round(self.crop_x + x * scale_x), round(self.crop_y + y * scale_y),
+                round(width * scale_x), round(height * scale_y))
+
+    def crop_from_sensor(self, sensor_crop) -> tuple[int, int, int, int] | None:
+        """
+        Sensor-pixel region -> mode-pixel crop, clipped to what this mode sees
+        and snapped to even numbers. None if the region lies outside the mode.
+        """
+        scale_x, scale_y = self._sensor_pixels_per_mode_pixel()
+        sensor_x, sensor_y, sensor_width, sensor_height = sensor_crop
+        left   = (sensor_x - self.crop_x) / scale_x
+        top    = (sensor_y - self.crop_y) / scale_y
+        right  = left + sensor_width  / scale_x
+        bottom = top  + sensor_height / scale_y
+        return self.fit_crop(round(left), round(top),
+                             round(right - left), round(bottom - top))
+
+    def fit_crop(self, x: int, y: int, width: int, height: int) -> tuple[int, int, int, int] | None:
+        """
+        Clip a mode-pixel crop to the frame and snap it to even numbers, which
+        the video encoders require. None if less than MIN_CROP_SIZE remains.
+        """
+        right  = min(self.width,  x + width)
+        bottom = min(self.height, y + height)
+        x, y   = max(0, x) & ~1, max(0, y) & ~1
+        width  = (right  - x) & ~1
+        height = (bottom - y) & ~1
+        if width < MIN_CROP_SIZE or height < MIN_CROP_SIZE:
+            return None
+        return (x, y, width, height)
+
+
+# Smallest crop, in mode pixels, that is accepted along either axis
+MIN_CROP_SIZE = 16
 
 
 # =============================================================================
@@ -121,6 +173,12 @@ class PiCamera:
         # the preview configuration (or is stopped)
         self._recording_channels: int | None = None
         self._camera_started = False
+        # Part of the frame that is recorded, in mode pixels; None = all of it
+        self._recording_crop: tuple[int, int, int, int] | None = None
+        # When the sensor exposed the last captured frame, and the frame
+        # duration it was running at, in seconds
+        self.last_frame_time_s: float | None = None
+        self.last_frame_duration_s: float | None = None
         # Rotating frame buffers, keyed by shape — see _get_frame_buffer
         self._frame_buffers: dict = {}
         self._frame_buffer_index: dict = {}
@@ -147,30 +205,34 @@ class PiCamera:
             fps_range = mode.get("fps", (0, 0))
             max_fps   = float(fps_range[1]) if isinstance(fps_range, (list, tuple)) else float(fps_range)
             crop      = mode.get("crop_limits", None)
-            crop_w    = crop[2] if crop and len(crop) == 4 else 0
-            crop_h    = crop[3] if crop and len(crop) == 4 else 0
+            has_crop  = bool(crop) and len(crop) == 4
             return SensorMode(
                 index              = index,
                 width              = size[0],
                 height             = size[1],
                 max_fps            = max_fps,
                 bit_depth          = int(mode.get("bit_depth", 12)),
-                crop_width         = crop_w,
-                crop_height        = crop_h,
+                crop_width         = crop[2] if has_crop else 0,
+                crop_height        = crop[3] if has_crop else 0,
                 sensor_full_width  = sensor_full_width,
                 sensor_full_height = sensor_full_height,
+                crop_x             = crop[0] if has_crop else 0,
+                crop_y             = crop[1] if has_crop else 0,
             )
 
-        sensor_modes = [
-            build_mode(index, mode)
-            for index, mode in enumerate(raw_modes)
-            if ALLOWED_BIT_DEPTHS is None
-            or int(mode.get("bit_depth", 12)) in ALLOWED_BIT_DEPTHS
-        ]
+        all_modes    = [build_mode(index, mode) for index, mode in enumerate(raw_modes)]
+        sensor_modes = [mode for mode in all_modes
+                        if ALLOWED_BIT_DEPTHS is None or mode.bit_depth in ALLOWED_BIT_DEPTHS]
 
-        # Fall back to all modes if filtering left nothing (unknown camera)
+        # A camera without the preferred bit depth: offer each resolution once,
+        # at whichever bit depth reads it out fastest
         if not sensor_modes:
-            sensor_modes = [build_mode(i, m) for i, m in enumerate(raw_modes)]
+            fastest: dict[tuple[int, int], SensorMode] = {}
+            for mode in all_modes:
+                size = (mode.width, mode.height)
+                if size not in fastest or mode.max_fps > fastest[size].max_fps:
+                    fastest[size] = mode
+            sensor_modes = list(fastest.values())
 
         sensor_modes.sort(
             key=lambda m: (m.width * m.height, m.max_fps),
@@ -187,6 +249,7 @@ class PiCamera:
         _active_mode has no effect on a stream that's already running.
         """
         self._active_mode = mode
+        self._recording_crop = None
         # The main stream's resolution is part of what prepare_for_recording()
         # configures, so a mode change invalidates it regardless of whether a
         # preview is running — otherwise a stale _recording_channels could
@@ -260,6 +323,8 @@ class PiCamera:
                      "format": "RGB888"},
             lores = {"size":   (preview_width, preview_height),
                      "format": "YUV420"},   # lores must be YUV — converted below
+            sensor = self._sensor_config(),
+            controls = self._frame_rate_controls(),
         )
         self._camera.configure(preview_config)
         self._camera.start()
@@ -419,6 +484,8 @@ class PiCamera:
                      "format": main_format},
             lores = {"size": self._preview_stream_size(),
                      "format": "YUV420"},
+            sensor = self._sensor_config(),
+            controls = self._frame_rate_controls(),
         )
         self._camera.configure(recording_config)
         self._camera.start()
@@ -433,13 +500,58 @@ class PiCamera:
 
         self._warm_frame_pool(channels)
 
+    def _sensor_config(self) -> dict:
+        """
+        Pin the sensor readout to the active mode, bit depth included.
+
+        Without the bit depth, picamera2 picks the deepest readout available
+        at this size — 12-bit on the IMX477 — which runs at about two thirds
+        of the frame rate the 8-bit mode offers. Recordings are 8-bit either
+        way, so the extra depth bought nothing.
+        """
+        return {"output_size": (self._active_mode.width, self._active_mode.height),
+                "bit_depth":   self._active_mode.bit_depth}
+
+    def _frame_rate_controls(self) -> dict:
+        """
+        The frame rate as part of the configuration, so it applies from the
+        very first frame. Set only after start(), it takes effect a few frames
+        late, and those first frames come at the camera's default rate.
+        """
+        return {"FrameRate": self._target_fps} if self._target_fps else {}
+
+    def set_recording_crop(self, crop: tuple[int, int, int, int] | None) -> None:
+        """
+        Record only this part of the frame: (x, y, width, height) in pixels
+        of the active mode, or None for the whole frame. Call before
+        prepare_for_recording(), which sizes the frame pool to match.
+
+        The camera still delivers full frames and the preview still shows
+        them; only the copy out of the camera buffer is cropped. Copying,
+        encoding and writing all scale with the pixels kept, so a thin strip
+        records far faster than the full frame.
+        """
+        if crop is not None:
+            mode = self._active_mode
+            x, y, width, height = crop
+            if x < 0 or y < 0 or width <= 0 or height <= 0 \
+                    or x + width > mode.width or y + height > mode.height:
+                raise ValueError(f"Crop {crop} does not fit the "
+                                 f"{mode.width}x{mode.height} sensor mode")
+        self._recording_crop = crop
+
+    def _recording_frame_size(self) -> tuple[int, int]:
+        if self._recording_crop is not None:
+            return self._recording_crop[2], self._recording_crop[3]
+        return self._active_mode.width, self._active_mode.height
+
     def _warm_frame_pool(self, channels: int) -> None:
         """
         Allocate the frame pool for this recording before capture starts, and
         free pools for any other frame size. A recording uses one size only,
         and on a 2 GB Pi a single 4K pool is already ~250 MB.
         """
-        width, height = self._active_mode.width, self._active_mode.height
+        width, height = self._recording_frame_size()
         shape = (height, width) if channels == 1 else (height, width, 3)
         wanted_key = (shape, np.dtype(np.uint8).str)
         for key in [key for key in self._frame_buffers if key != wanted_key]:
@@ -562,6 +674,12 @@ class PiCamera:
         request_end = time.perf_counter()
 
         try:
+            frame_metadata = request.get_metadata()
+            sensor_timestamp_ns = frame_metadata.get("SensorTimestamp")
+            self.last_frame_time_s = (sensor_timestamp_ns / 1e9 if sensor_timestamp_ns
+                                      else request_end)
+            frame_duration_us = frame_metadata.get("FrameDuration")
+            self.last_frame_duration_s = frame_duration_us / 1e6 if frame_duration_us else None
             recording_frame = None
             if not discard:
                 # MappedArray exposes the camera's DMA buffer without copying.
@@ -621,18 +739,21 @@ class PiCamera:
         configured size matters: cv2.VideoWriter silently discards frames
         whose size differs from what it was opened with, leaving a file with
         a header and no frames.
+
+        With a recording crop, only the cropped pixels are read and copied.
         """
-        width, height = self._active_mode.width, self._active_mode.height
+        x, y = (self._recording_crop or (0, 0))[:2]
+        width, height = self._recording_frame_size()
 
         if source.ndim == 2:
-            luma = source[:height, :width]
+            luma = source[y:y + height, x:x + width]
             if channels == 1:
                 return self._copy_into_pool(luma)
             # Color requested but the stream is YUV420 (prepare_for_recording
             # was not called): deliver the luma as three equal channels.
             return np.stack([luma] * 3, axis=2)
 
-        pixels = source[:height, :width, :3]
+        pixels = source[y:y + height, x:x + width, :3]
         if channels == 1:
             return self._bgr_to_gray_fallback(np.ascontiguousarray(pixels))
         return self._copy_into_pool(pixels)
@@ -680,6 +801,10 @@ class StubCamera:
         self._target_fps: float | None = None
         self._preview_callback = None
         self._preview_fps = 10
+        self._recording_crop: tuple[int, int, int, int] | None = None
+        self.last_frame_time_s: float | None = None
+        self.last_frame_duration_s: float | None = None
+        self._next_frame_at = 0.0
 
     def _fake_sensor_modes(self) -> list[SensorMode]:
         """
@@ -688,20 +813,25 @@ class StubCamera:
         """
         SENSOR_W, SENSOR_H = 4056, 3040
         modes = [
-            # width height max_fps bits  crop_w crop_h
-            SensorMode(0, 4056, 3040,  17.39, 8, 4056, 3040, SENSOR_W, SENSOR_H),
-            SensorMode(1, 2028, 1520,  66.38, 8, 4056, 3040, SENSOR_W, SENSOR_H),
-            SensorMode(2, 2028, 1080,  92.27, 8, 4056, 2160, SENSOR_W, SENSOR_H),
-            SensorMode(3, 1332,  990, 147.91, 8, 2664, 1980, SENSOR_W, SENSOR_H),
+            # width height max_fps bits  crop_w crop_h                  crop_x crop_y
+            SensorMode(0, 4056, 3040,  17.39, 8, 4056, 3040, SENSOR_W, SENSOR_H,   0,   0),
+            SensorMode(1, 4056, 2160,  24.32, 8, 4056, 2160, SENSOR_W, SENSOR_H,   0, 440),
+            SensorMode(2, 2028, 1520,  66.38, 8, 4056, 3040, SENSOR_W, SENSOR_H,   0,   0),
+            SensorMode(3, 2028, 1080,  92.27, 8, 4056, 2160, SENSOR_W, SENSOR_H,   0, 440),
+            SensorMode(4, 1332,  990, 147.91, 8, 2664, 1980, SENSOR_W, SENSOR_H, 696, 528),
         ]
         modes.sort(key=lambda m: (m.width * m.height, m.max_fps), reverse=True)
         return modes
 
     def set_mode(self, mode: SensorMode) -> None:
         self._active_mode = mode
+        self._recording_crop = None
 
     def set_color_mode(self, channels: int) -> None:
         self._preview_channels = channels
+
+    def set_recording_crop(self, crop: tuple[int, int, int, int] | None) -> None:
+        self._recording_crop = crop
 
     def set_capture_fps(self, fps: float) -> None:
         self._target_fps = fps   # stored for interface parity; stub ignores it
@@ -763,13 +893,27 @@ class StubCamera:
         frames match what the writer was opened for. A fixed size here would
         trip the writer's dimension guard on every recording.
         """
+        # Deliver at the sensor's rate, as a real camera does; the record
+        # loop waits for frames rather than pacing itself
+        frame_duration = 1.0 / min(self._target_fps or self._active_mode.max_fps,
+                                   self._active_mode.max_fps)
+        self._next_frame_at = max(self._next_frame_at + frame_duration, time.perf_counter())
+        time.sleep(max(0.0, self._next_frame_at - time.perf_counter()))
+        self.last_frame_duration_s = frame_duration
+
         width  = self._active_mode.width
         height = self._active_mode.height
         if channels == 1:
-            recording_frame = np.random.randint(60, 180, (height, width), dtype=np.uint8)
+            full_frame = np.random.randint(60, 180, (height, width), dtype=np.uint8)
         else:
-            recording_frame = np.random.randint(60, 180, (height, width, 3), dtype=np.uint8)
-        display_frame = recording_frame if want_preview else None
+            full_frame = np.random.randint(60, 180, (height, width, 3), dtype=np.uint8)
+        recording_frame = full_frame
+        if self._recording_crop is not None:
+            x, y, crop_width, crop_height = self._recording_crop
+            recording_frame = np.ascontiguousarray(
+                full_frame[y:y + crop_height, x:x + crop_width])
+        self.last_frame_time_s = time.perf_counter()
+        display_frame = full_frame if want_preview else None
         if timings is not None:
             timings["wait_ms"] = timings["copy_ms"] = timings["preview_ms"] = 0.0
         return (None if discard else recording_frame), display_frame

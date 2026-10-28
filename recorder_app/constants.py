@@ -8,7 +8,7 @@ All tuneable values live here or in config_app.yaml — never hardcoded elsewher
 from pathlib import Path
 
 APP_NAME    = "RPi Recorder"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.1.0"
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 # Derived from the running user's home directory rather than hardcoded, because
@@ -31,9 +31,11 @@ PREVIEW_WIDTH         = 960         # preview stream width in pixels;
 BENCHMARK_FILE_MB     = 400         # size of temp file written during speed test
 BENCHMARK_SAFETY_MARGIN = 0.85      # fraction of write speed treated as usable budget
 
-# ── Sensor mode filtering ──────────────────────────────────────────────────────
-# Tracking never benefits from more than 8 bits per channel, and higher bit
-# depths cost framerate and storage. Set to None to expose all bit depths.
+# ── Sensor readout bit depth ───────────────────────────────────────────────────
+# Recordings are 8 bits per channel, and on the IMX477 the 8-bit readout runs
+# about 1.5× faster than the 12-bit one at every resolution. Only modes with
+# these bit depths are offered; a camera that has none of them gets each of
+# its resolutions at its fastest bit depth. None offers every mode.
 ALLOWED_BIT_DEPTHS    = [8]
 
 # ── Color modes ───────────────────────────────────────────────────────────────
