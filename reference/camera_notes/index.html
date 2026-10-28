@@ -1560,13 +1560,47 @@ framerate:</p>
 <td>14.0 fps</td>
 <td>11.7 fps</td>
 </tr>
+<tr>
+<td>4056 × 2160</td>
+<td>24.3 fps</td>
+<td>19.6 fps</td>
+<td>16.4 fps</td>
+</tr>
+<tr>
+<td>2028 × 1520</td>
+<td>66.4 fps</td>
+<td>53.8 fps</td>
+<td>45.2 fps</td>
+</tr>
+<tr>
+<td>2028 × 1080</td>
+<td>92.3 fps</td>
+<td>74.7 fps</td>
+<td>62.8 fps</td>
+</tr>
+<tr>
+<td>1332 × 990</td>
+<td>147.9 fps</td>
+<td>120.5 fps</td>
+<td>101.7 fps</td>
+</tr>
 </tbody>
 </table>
-<p>The app <strong>exposes only 8-bit modes</strong>, set by <code>ALLOWED_BIT_DEPTHS</code> in
-<code>constants.py</code>. Tracking works on centroids and blobs; 8 bits is ample, and the
-extra depth would cost framerate and storage for no benefit.</p>
+<p>The app <strong>uses only 8-bit modes</strong>, set by <code>ALLOWED_BIT_DEPTHS</code> in
+<code>constants.py</code>. Recordings are 8 bits per channel anyway, so the deeper
+readouts would cost framerate for no benefit. A camera without 8-bit modes gets
+each resolution at its fastest bit depth instead.</p>
 <p>This also explains something confusing in the raw mode list: the same resolution
 appears several times at different framerates. Those are the bit-depth variants.</p>
+<div class="admonition warning">
+<p class="admonition-title">The bit depth must be requested, not just filtered</p>
+<p>picamera2 picks the readout from the configuration it is given. Given only
+the output size, it chooses the <strong>deepest</strong> readout at that size — 12-bit
+on the IMX477. <code>PiCamera._sensor_config()</code> therefore passes the mode's
+<code>bit_depth</code> to both the preview and the recording configuration. Before it
+did, the dropdown showed 8-bit maximums while the camera ran at the 12-bit
+rates, about two thirds of them.</p>
+</div>
 <p>If a future analysis genuinely needs more depth, change <code>ALLOWED_BIT_DEPTHS</code> —
 the code handles it, the modes are simply filtered out of the UI.</p>
 <div class="admonition note">

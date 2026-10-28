@@ -1266,6 +1266,7 @@ silently overwrite one another as long as their metadata differs.</p>
 <p>For a <strong>video</strong> recording, in your chosen save folder:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>foraging_high-dim_1.avi              ← the footage
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>foraging_high-dim_1_metadata.yaml    ← everything about it
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>foraging_high-dim_1_frame_times.csv  ← when each frame was taken
 </code></pre></div>
 <p>For an <strong>image stack</strong>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>foraging_high-dim_1/
@@ -1273,9 +1274,15 @@ silently overwrite one another as long as their metadata differs.</p>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    foraging_high-dim_1_00002.tiff
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ...
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    metadata.yaml
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    frame_times.csv
 </code></pre></div>
 <p>Frame numbers are 1-based and zero-padded to five digits, so they sort correctly
 in any file browser or analysis script.</p>
+<p><code>frame_times.csv</code> lists each frame's number and <code>time_s</code>: when the sensor
+exposed it, in seconds after the first frame. The video file only stores a
+nominal frame rate, so use these times for any speed or duration analysis. A gap
+of two frame intervals means one frame was missed; the metadata counts them
+under <code>frames_missed</code>.</p>
 <hr />
 <h2 id="the-pages-in-this-section">The pages in this section<a class="headerlink" href="#the-pages-in-this-section" title="Permanent link">&para;</a></h2>
 <table>

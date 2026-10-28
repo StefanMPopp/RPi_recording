@@ -746,6 +746,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-camera-stopped-sending-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "The camera stopped sending frames"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-to-include-when-reporting-a-problem" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1391,6 +1402,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-camera-stopped-sending-frames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "The camera stopped sending frames"
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-to-include-when-reporting-a-problem" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1539,6 +1561,19 @@ rejected with an explanation. Profiles are the files you created with
 <li>An error occurred, in which case a dialog explains it and the error is also
   written into the metadata file's <code>capture.error</code> field</li>
 </ul>
+<hr />
+<h2 id="the-camera-stopped-sending-frames">"The camera stopped sending frames"<a class="headerlink" href="#the-camera-stopped-sending-frames" title="Permanent link">&para;</a></h2>
+<p>The recording or fps measurement ends after 2 s without a frame. There are two
+causes:</p>
+<ul>
+<li><strong>The Pi ran out of memory.</strong> On a 2 GB Pi, full 4056 × 3040 frames with a
+  browser or other large programs open can leave too little memory, and the
+  whole system stalls. Close other programs, or record a crop or a smaller
+  sensor mode.</li>
+<li><strong>A loose camera cable.</strong> Reseat the ribbon cable at both ends with the Pi
+  switched off. If it keeps happening, try another cable.</li>
+</ul>
+<p>The next recording restarts the camera, so you can simply try again.</p>
 <hr />
 <h2 id="what-to-include-when-reporting-a-problem">What to include when reporting a problem<a class="headerlink" href="#what-to-include-when-reporting-a-problem" title="Permanent link">&para;</a></h2>
 <ol>

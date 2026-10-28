@@ -1461,9 +1461,19 @@ distorting the frame timing of everything after it. With a queue between them:</
 <ul>
 <li>The capture thread keeps precise timing</li>
 <li>Disk stalls consume queue slack instead of disrupting capture</li>
-<li><strong>A full queue is an unambiguous "the disk cannot keep up" signal</strong> — which is
-  what gives an honest dropped-frame count rather than an estimate</li>
 </ul>
+<p>The capture thread does not pace itself. The sensor runs at the recording's
+frame rate, and the thread simply waits for each frame. picamera2 keeps only
+<strong>one</strong> finished frame, so a thread that slept on its own clock would lose a
+frame whenever it overslept — an earlier version did, losing a few frames per
+second at 60 fps. Frames the thread never received show up as gaps in the
+sensor timestamps, which is how <code>frames_missed</code> is counted.</p>
+<p>A recording crop is applied in <code>PiCamera.capture_frame</code>, while copying the
+frame out of the camera's buffer: only the cropped pixels are read, and the
+writers are opened at the cropped size. The camera and the preview still see
+the full frame.
+- <strong>A full queue is an unambiguous "the disk cannot keep up" signal</strong> — which is
+  what gives an honest dropped-frame count rather than an estimate</p>
 <p>Queue depth is surfaced live in the status panel because it is the earliest
 warning of trouble, appearing before any frame is actually lost.</p>
 <h3 id="thread-safety">Thread safety<a class="headerlink" href="#thread-safety" title="Permanent link">&para;</a></h3>
@@ -1524,7 +1534,9 @@ report roughly 1/(capture + encode) where a recording reaches
 1/max(capture, encode); an earlier version did that and understated the rate
 by up to half.</p>
 <p>Frames dropped at the queue mean the writer could not keep up (limit:
-<strong>encoding</strong>); otherwise the camera set the pace (limit: <strong>camera</strong>).</p>
+<strong>encoding</strong>). Otherwise capture set the pace: at 95% or more of the sensor
+mode's maximum the limit is the <strong>sensor</strong>; below that, the capture thread fell
+behind because the encoders were using the processor (limit: <strong>CPU</strong>).</p>
 <p>The SD card is deliberately not measured in that run: a few seconds of writes
 land in the operating system's RAM cache. Instead <code>record.capacity_for()</code>
 applies a third cap from the measured bytes per frame and the card's write

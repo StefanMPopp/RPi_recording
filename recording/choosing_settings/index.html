@@ -641,6 +641,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recording-only-part-of-the-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recording only part of the frame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#color-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1287,6 +1298,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recording-only-part-of-the-frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recording only part of the frame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#color-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1461,6 +1483,47 @@ of view are marked <code>[NN% FoV]</code> in the dropdown.</p>
 usually the right choice.</strong> It keeps the full field of view and allows up to
 66 fps.</p>
 <hr />
+<h2 id="recording-only-part-of-the-frame">Recording only part of the frame<a class="headerlink" href="#recording-only-part-of-the-frame" title="Permanent link">&para;</a></h2>
+<p>When only part of the arena matters — a trail, a bridge, a nest entrance —
+tick <strong>Crop</strong> and record just that rectangle. Copying, encoding and writing all
+scale with the pixels recorded, so a thin strip records far faster and smaller
+than the full frame.</p>
+<p>Measured on a Pi 4, grayscale, a strip 256 rows tall across the full width:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Full frame, fastest format</th>
+<th>Strip, every format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4056 × 3040</td>
+<td>~4 fps</td>
+<td>17.3 fps (sensor max)</td>
+</tr>
+<tr>
+<td>4056 × 2160</td>
+<td>~6 fps</td>
+<td>24.3 fps (sensor max)</td>
+</tr>
+<tr>
+<td>2028 × 1520</td>
+<td>~18 fps</td>
+<td>62–65 fps</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A crop cannot exceed the sensor mode's maximum fps</strong>: the sensor still reads
+the whole mode, and the crop is taken afterward. For more fps, choose a faster
+mode and crop that. Above about 60 fps the processor becomes the limit, and
+color strips are limited by encoding sooner than grayscale ones.</p>
+<p>Crops up to 1920 px wide use the Pi's hardware H.264 encoder even in the
+4056-wide modes.</p>
+<p>The crop stays on the same part of the scene when you change sensor mode. A
+mode that sees less of the sensor (1332 × 990) clips it to what it can see.</p>
+<hr />
 <h2 id="color-mode">Color mode<a class="headerlink" href="#color-mode" title="Permanent link">&para;</a></h2>
 <p>Use <strong>grayscale</strong> unless the analysis needs color. Tracking works on
 brightness; the color channels add data without adding usable signal.</p>
@@ -1530,16 +1593,21 @@ depends on resolution, color mode <strong>and</strong> format:</p>
 <table>
 <thead>
 <tr>
-<th>Stage</th>
+<th>Limit</th>
 <th>What it is</th>
 <th>Typical when</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>camera</strong></td>
-<td>Sensor readout and image processing</td>
-<td>High resolution, fast encoders</td>
+<td><strong>sensor</strong></td>
+<td>The sensor mode's maximum fps</td>
+<td>Small frames, or a thin crop</td>
+</tr>
+<tr>
+<td><strong>CPU</strong></td>
+<td>Capture falls behind while encoding shares the processor</td>
+<td>High fps with compressed formats</td>
 </tr>
 <tr>
 <td><strong>encoding</strong></td>
@@ -1559,13 +1627,16 @@ resolution and color mode: it records each format flat out for a few seconds
 maximum fps of every format, what limits it, megabytes per frame, and how long a
 recording fits on the card. The line under the selector summarizes the chosen
 format and turns red if the selected frame rate is above its maximum.</p>
-<p>Measurements are stored per resolution and color mode, so switching to an
+<p>Measurements are stored per sensor mode, recorded frame size (see
+<a href="#recording-only-part-of-the-frame">crop</a>) and color mode, so switching to an
 unmeasured combination shows it as not measured.</p>
 <h3 id="if-the-frame-rate-you-need-is-above-the-maximum">If the frame rate you need is above the maximum<a class="headerlink" href="#if-the-frame-rate-you-need-is-above-the-maximum" title="Permanent link">&para;</a></h3>
 <p>Read the <strong>Limited by</strong> column — the fix depends on it:</p>
 <ul>
-<li><strong>camera</strong> — lower the resolution; nothing else helps.
+<li><strong>sensor</strong> — choose a faster sensor mode; nothing else helps.
   <code>2028 × 1520</code> keeps the full field of view at a quarter of the pixels.</li>
+<li><strong>CPU</strong> — record a smaller crop, choose a format that is cheaper to encode
+  (TIFF needs the least CPU), or switch to grayscale.</li>
 <li><strong>encoding</strong> — choose a faster format (the table shows which), switch to
   grayscale, or lower the resolution.</li>
 <li><strong>SD card</strong> — choose a format with smaller frames, switch to grayscale, or

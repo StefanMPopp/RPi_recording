@@ -1370,7 +1370,10 @@ When a recording starts, the controls are replaced by a live status panel.</p>
 <strong>Reset view</strong> button next to it while zoomed.</p>
 <p>The preview is a lower-resolution stream than the recording — it exists to
 check framing and focus, not to judge final image quality. Zoom does not affect
-what is recorded; the full frame is always captured.</p>
+what is recorded.</p>
+<p>With <strong>Crop</strong> ticked, the preview shows the recorded region as an amber frame
+and dims everything outside it. Drag inside the frame to move it, or drag an
+edge or corner to resize it. The crop cannot be changed while recording.</p>
 <hr />
 <h2 id="camera">Camera<a class="headerlink" href="#camera" title="Permanent link">&para;</a></h2>
 <p><strong>Sensor mode</strong> — the resolution. Some modes are marked <code>[66% FoV]</code>, meaning
@@ -1383,6 +1386,13 @@ losing resolution, and are ideal for slow behaviors or long recordings.</p>
 <p><strong>Color</strong> — Grayscale (default) or Color. Grayscale records only the
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.</p>
+<p><strong>Crop</strong> — tick <strong>Record only part of the frame</strong> to record just a rectangle
+of it. <strong>Top</strong>, <strong>Height</strong>, <strong>Left</strong> and <strong>Width</strong> are in pixels of the current
+sensor mode; <strong>Full width</strong> stretches the crop across the frame. The line below
+shows the recorded size. A smaller crop records at a higher fps, up to the
+sensor mode's maximum — see
+<a href="../choosing_settings/#recording-only-part-of-the-frame">recording only part of the frame</a>.
+Profiles save the crop.</p>
 <p><strong>Show preview</strong> — untick if the Pi struggles. Displaying the preview costs
 some CPU; disabling it frees that for encoding.</p>
 <hr />
@@ -1390,7 +1400,7 @@ some CPU; disabling it frees that for encoding.</p>
 <p><strong>Save to</strong> — the output folder. The folder icon opens a browser.</p>
 <p><strong>Format</strong> — the file format. Hover the blue ⓘ for the measured capacity table:
 for every format at the current resolution and color mode, the maximum frame
-rate, what limits it (camera, encoding or SD card), megabytes per frame, and how
+rate, what limits it (sensor, CPU, encoding or SD card), megabytes per frame, and how
 long a recording fits on the card. Empty until you run
 <strong>Settings → Measure maximum fps</strong>. See
 <a href="../choosing_settings/#maximum-frame-rate">maximum frame rate</a>.</p>
