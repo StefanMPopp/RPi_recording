@@ -1024,6 +1024,73 @@ def make_writer(settings: RecordingSettings):
 
 
 # =============================================================================
+# Stills — one frame saved the way the selected format would store it
+# =============================================================================
+
+def still_extension(output_format: OutputFormat) -> str:
+    """
+    The image format for a still taken with this output format.
+
+    Image stacks use their own format. Both video formats store lossy,
+    4:2:0-subsampled frames, so their stills are JPEGs: for MJPEG the very
+    encoding each video frame gets, and for H.264 the closest single-image
+    equivalent of its compression.
+    """
+    if output_format.is_image_stack:
+        return output_format.extension
+    return ".jpg"
+
+
+def still_file(settings: RecordingSettings) -> Path:
+    """{save_dir}/{file_name}_still.{ext}, next to the video or stack folder."""
+    return settings.save_dir / f"{settings.file_name}_still{still_extension(settings.output_format)}"
+
+
+def save_still(frame: np.ndarray, target: Path) -> None:
+    """
+    Write one frame (2D grayscale or 3D BGR) to `target`, encoded with the
+    same settings the recording writers use for that format.
+    """
+    import cv2
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.suffix == ".jpg":
+        _save_jpeg_like_mjpeg(frame, target)
+        return
+    if not cv2.imwrite(str(target), frame, image_encode_flags(cv2, target.suffix)):
+        raise RuntimeError(f"Could not write {target}")
+
+
+def _save_jpeg_like_mjpeg(frame: np.ndarray, target: Path) -> None:
+    """
+    Encode with ffmpeg's MJPEG encoder at the recording's quality, so the
+    still matches a frame of an MJPEG video exactly. Without ffmpeg, OpenCV's
+    JPEG encoder at high quality is a close substitute.
+    """
+    import subprocess
+    height, width = frame.shape[:2]
+    command = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "rawvideo",
+        "-pix_fmt", "gray" if frame.ndim == 2 else "bgr24",
+        "-s", f"{width}x{height}",
+        "-i", "-",
+        "-frames:v", "1", "-c:v", "mjpeg", "-q:v", "3",
+        str(target),
+    ]
+    try:
+        result = subprocess.run(command, input=np.ascontiguousarray(frame).tobytes(),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                                timeout=30)
+        if result.returncode == 0:
+            return
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    import cv2
+    if not cv2.imwrite(str(target), frame, [cv2.IMWRITE_JPEG_QUALITY, 95]):
+        raise RuntimeError(f"Could not write {target}")
+
+
+# =============================================================================
 # Recording session — manages capture and writer threads
 # =============================================================================
 

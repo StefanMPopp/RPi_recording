@@ -12,7 +12,7 @@ When a recording starts, the controls are replaced by a live status panel.
 
 | Action | Result |
 |---|---|
-| ++ctrl++ + scroll | Zoom in and out, centerd on the cursor |
+| ++ctrl++ + scroll | Zoom in and out, centered on the cursor |
 | scroll | Pan up and down (when zoomed in) |
 | ++shift++ + scroll | Pan left and right (when zoomed in) |
 | double-click | Reset to the full frame |
@@ -27,6 +27,24 @@ what is recorded.
 With **Crop** ticked, the preview shows the recorded region as an amber frame
 and dims everything outside it. Drag inside the frame to move it, or drag an
 edge or corner to resize it. The crop cannot be changed while recording.
+
+### Snapshot
+
+**Snapshot**, below the preview on the right (or ++s++), saves one frame taken
+exactly as a recording with the current settings would take it: same sensor
+mode, frame rate (and so exposure), color mode and crop, at full resolution.
+It is saved in the save directory as `<file name>_still`, next to the video or
+image-stack folder, and you are asked before an existing still is overwritten.
+
+| Format | Still |
+|---|---|
+| MJPEG video | `.jpg`, encoded exactly like each frame of the video |
+| H.264 video | `.jpg` at the same quality — the closest single image to an H.264 frame |
+| TIFF image stack | `.tiff`, like each frame of the stack |
+| PNG image stack | `.png`, like each frame of the stack |
+
+A grayscale MJPEG or H.264 still is stored as a color JPEG with gray content,
+just as the video frames are.
 
 ---
 

@@ -8,7 +8,7 @@ All tuneable values live here or in config_app.yaml — never hardcoded elsewher
 from pathlib import Path
 
 APP_NAME    = "RPi Recorder"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 # Derived from the running user's home directory rather than hardcoded, because
@@ -115,6 +115,11 @@ FRAME_QUEUE_SIZE = 8
 # limit, recording and the preview would wait forever and the window could
 # no longer be closed.
 CAMERA_STALL_TIMEOUT_S = 2.0
+
+# Frames skipped before a snapshot is kept. Starting the recording
+# configuration restarts the camera; exposure measured stable from the first
+# frame, so this is only a margin.
+SNAPSHOT_SKIP_FRAMES = 2
 
 # Threads used to encode image-stack frames. The Pi 4 has four cores and the
 # capture thread needs one, so three leaves the system responsive. Raising this

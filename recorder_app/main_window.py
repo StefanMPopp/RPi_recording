@@ -46,6 +46,7 @@ from constants  import (
     PREVIEW_WIDTH,
     METADATA_DEFAULTS,
     COLOR_MODES, DEFAULT_COLOR_MODE,
+    SNAPSHOT_SKIP_FRAMES,
 )
 from config     import (load_app_config, save_app_config, load_profile, save_profile,
                         default_profile, LEGACY_COLOR_MODES)
@@ -54,7 +55,7 @@ from camera     import make_camera, SensorMode
 from record     import (RecordingSession, RecordingSettings,
                         measure_format_throughput, capacity_for,
                         throughput_cache_key, h264_encoder_note,
-                        remove_previous_stack_frames)
+                        remove_previous_stack_frames, still_file, save_still)
 from metadata   import build_metadata, write_metadata
 from metadata_list import load_metadata_list, build_auto_file_name, MetadataRow
 import formats
@@ -1106,8 +1107,22 @@ class MainWindow(QMainWindow):
             "Shift + scroll: pan left/right     ·     double-click: reset"
         )
         zoom_hint.setStyleSheet(f"color: {COLOR['text_dim']}; font-size: 11px;")
-        zoom_hint.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(zoom_hint)
+        zoom_hint.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        self._snapshot_button = QPushButton("Snapshot")
+        self._snapshot_button.setFixedHeight(26)
+        self._snapshot_button.setToolTip(
+            "Save one frame with the current settings — sensor mode, frame rate,\n"
+            "color mode and crop — as <file name>_still in the save directory.\n"
+            "Shortcut: S"
+        )
+        self._snapshot_button.clicked.connect(self._on_snapshot)
+
+        footer_row = QHBoxLayout()
+        footer_row.addWidget(zoom_hint, stretch=1)
+        footer_row.addSpacing(12)
+        footer_row.addWidget(self._snapshot_button)
+        layout.addLayout(footer_row)
 
         # Wire zoom readout
         self._preview_widget.zoom_changed.connect(self._on_zoom_changed)
@@ -2168,32 +2183,10 @@ class MainWindow(QMainWindow):
 
         settings = self._collect_recording_settings()
 
-        # ── Validation ─────────────────────────────────────────────────────────
         # Checked explicitly rather than letting the recording fail on the first
         # write: a clear message before starting is far better than discovering
         # the problem after the animals have been running for ten minutes.
-        try:
-            if not settings.save_dir.is_dir():
-                QMessageBox.warning(
-                    self, "Save directory not found",
-                    f"This directory does not exist:\n{settings.save_dir}\n\n"
-                    f"Choose another with the folder button, or create it first."
-                )
-                return
-            if not os.access(settings.save_dir, os.W_OK):
-                QMessageBox.warning(
-                    self, "Save directory not writable",
-                    f"You do not have permission to write to:\n"
-                    f"{settings.save_dir}\n\n"
-                    f"Choose a directory inside your own home folder."
-                )
-                return
-        except OSError as path_error:
-            QMessageBox.warning(
-                self, "Save directory unusable",
-                f"Could not use this directory:\n{settings.save_dir}\n\n"
-                f"{path_error}"
-            )
+        if not self._check_save_dir(settings.save_dir):
             return
 
         target = settings.output_dir if settings.is_image_stack else settings.video_file
@@ -2265,6 +2258,7 @@ class MainWindow(QMainWindow):
         self._recording_settings = settings
         self._is_recording       = True
         self._preview_widget.set_crop_editable(False)
+        self._snapshot_button.setEnabled(False)
 
         self._setup_panel.setVisible(False)
         self._status_panel.setVisible(True)
@@ -2278,6 +2272,90 @@ class MainWindow(QMainWindow):
 
         # Poll the session for live stats
         self._status_timer.start(250)
+
+    def _check_save_dir(self, save_dir: Path) -> bool:
+        """True if save_dir exists and is writable; otherwise explain why not."""
+        from PyQt6.QtWidgets import QMessageBox
+        try:
+            if not save_dir.is_dir():
+                QMessageBox.warning(
+                    self, "Save directory not found",
+                    f"This directory does not exist:\n{save_dir}\n\n"
+                    f"Choose another with the folder button, or create it first."
+                )
+                return False
+            if not os.access(save_dir, os.W_OK):
+                QMessageBox.warning(
+                    self, "Save directory not writable",
+                    f"You do not have permission to write to:\n"
+                    f"{save_dir}\n\n"
+                    f"Choose a directory inside your own home folder."
+                )
+                return False
+        except OSError as path_error:
+            QMessageBox.warning(
+                self, "Save directory unusable",
+                f"Could not use this directory:\n{save_dir}\n\n"
+                f"{path_error}"
+            )
+            return False
+        return True
+
+    def _on_snapshot(self) -> None:
+        """
+        Save one frame exactly as a recording with the current settings would
+        capture it: same sensor mode, frame rate (and so exposure), color mode
+        and crop, encoded like the selected format (see record.still_extension).
+        """
+        from PyQt6.QtWidgets import QMessageBox
+
+        if self._is_recording or self._is_finishing:
+            return
+        settings = self._collect_recording_settings()
+        if not self._check_save_dir(settings.save_dir):
+            return
+
+        target = still_file(settings)
+        try:
+            target_exists = target.exists()
+        except OSError:
+            target_exists = False
+        if target_exists:
+            overwrite = QMessageBox.question(
+                self, "Overwrite existing still?",
+                f"This already exists:\n{target}\n\nOverwrite it?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if overwrite != QMessageBox.StandardButton.Yes:
+                return
+
+        def capture_and_save() -> None:
+            # The same path a recording takes, so the still shows what the
+            # recording would. The first frames after a camera restart are
+            # skipped in case exposure is still settling.
+            self._camera.set_recording_crop(settings.crop)
+            self._camera.prepare_for_recording(settings.channels)
+            for _ in range(SNAPSHOT_SKIP_FRAMES):
+                self._camera.capture_frame(settings.channels, discard=True)
+            frame, _ = self._camera.capture_frame(settings.channels)
+            save_still(np.array(frame), target)
+
+        self._snapshot_button.setEnabled(False)
+        self._camera.pause_preview()
+        try:
+            self._run_with_busy_dialog("Taking snapshot…", capture_and_save)
+        except Exception as snapshot_error:
+            QMessageBox.critical(self, "Could not take snapshot", str(snapshot_error))
+            return
+        finally:
+            self._snapshot_button.setEnabled(True)
+            if self._show_preview_check.isChecked():
+                try:
+                    self._camera.resume_preview()
+                except Exception:
+                    pass
+        self._bottom_status.setText(f"Snapshot saved: {target.name}")
 
     def _stop_recording(self) -> None:
         """
@@ -2416,6 +2494,7 @@ class MainWindow(QMainWindow):
         self._is_recording = False
         self._is_finishing = False
         self._preview_widget.set_crop_editable(True)
+        self._snapshot_button.setEnabled(True)
         self._setup_panel.setVisible(True)
         self._status_panel.setVisible(False)
         self._warning_label.setText("")
@@ -3184,7 +3263,7 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event) -> None:
         """
-        `q` stops an in-progress recording.
+        `q` stops an in-progress recording; `s` takes a snapshot.
         Left/Right arrows step through the metadata list — but only when the
         focus isn't in a text field, so arrow keys still move the cursor
         normally while editing.
@@ -3201,6 +3280,12 @@ class MainWindow(QMainWindow):
             focus_widget = QApplication.focusWidget()
             if not isinstance(focus_widget, (QLineEdit, QSpinBox, QDoubleSpinBox)):
                 self._start_recording()
+                return
+
+        if key == Qt.Key.Key_S and not (self._is_recording or self._is_finishing):
+            focus_widget = QApplication.focusWidget()
+            if not isinstance(focus_widget, (QLineEdit, QSpinBox, QDoubleSpinBox)):
+                self._on_snapshot()
                 return
 
         if key in (Qt.Key.Key_Left, Qt.Key.Key_Right) and self._metadata_rows:
