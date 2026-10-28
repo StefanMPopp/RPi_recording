@@ -560,6 +560,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Live preview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1245,6 +1262,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Live preview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1350,7 +1384,7 @@ When a recording starts, the controls are replaced by a live status panel.</p>
 <tbody>
 <tr>
 <td><span class="keys"><kbd class="key-control">Ctrl</kbd></span> + scroll</td>
-<td>Zoom in and out, centerd on the cursor</td>
+<td>Zoom in and out, centered on the cursor</td>
 </tr>
 <tr>
 <td>scroll</td>
@@ -1374,6 +1408,40 @@ what is recorded.</p>
 <p>With <strong>Crop</strong> ticked, the preview shows the recorded region as an amber frame
 and dims everything outside it. Drag inside the frame to move it, or drag an
 edge or corner to resize it. The crop cannot be changed while recording.</p>
+<h3 id="snapshot">Snapshot<a class="headerlink" href="#snapshot" title="Permanent link">&para;</a></h3>
+<p><strong>Snapshot</strong>, below the preview on the right (or <span class="keys"><kbd class="key-s">S</kbd></span>), saves one frame taken
+exactly as a recording with the current settings would take it: same sensor
+mode, frame rate (and so exposure), color mode and crop, at full resolution.
+It is saved in the save directory as <code>&lt;file name&gt;_still</code>, next to the video or
+image-stack folder, and you are asked before an existing still is overwritten.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Still</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MJPEG video</td>
+<td><code>.jpg</code>, encoded exactly like each frame of the video</td>
+</tr>
+<tr>
+<td>H.264 video</td>
+<td><code>.jpg</code> at the same quality — the closest single image to an H.264 frame</td>
+</tr>
+<tr>
+<td>TIFF image stack</td>
+<td><code>.tiff</code>, like each frame of the stack</td>
+</tr>
+<tr>
+<td>PNG image stack</td>
+<td><code>.png</code>, like each frame of the stack</td>
+</tr>
+</tbody>
+</table>
+<p>A grayscale MJPEG or H.264 still is stored as a color JPEG with gray content,
+just as the video frames are.</p>
 <hr />
 <h2 id="camera">Camera<a class="headerlink" href="#camera" title="Permanent link">&para;</a></h2>
 <p><strong>Sensor mode</strong> — the resolution. Some modes are marked <code>[66% FoV]</code>, meaning
