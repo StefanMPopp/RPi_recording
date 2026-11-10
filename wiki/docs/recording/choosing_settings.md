@@ -279,7 +279,9 @@ hold still between measurements.
 1. Lay targets with fine black print (text, a printed checkerboard) on the
    arena floor: one in the center and one in each corner of the orange frame.
    A printed resolution test chart works too, if it reaches the corners of
-   the frame: only the center and the four corners are measured.
+   the frame: only the center and the four corners are measured. A chart
+   is included: [lens_calibration.jpg](lens_calibration.jpg), also at
+   `~/RPi_recording/wiki/docs/recording/lens_calibration.jpg` on every Pi.
 2. Open the aperture fully (lowest f-number) and focus on the center
    target. Focus is most precise when the depth of field is shallowest. Do
    not refocus after this.

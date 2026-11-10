@@ -8,7 +8,7 @@ All tuneable values live here or in config_app.yaml — never hardcoded elsewher
 from pathlib import Path
 
 APP_NAME    = "RPi Recorder"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 # ── Default paths ──────────────────────────────────────────────────────────────
 # Derived from the running user's home directory rather than hardcoded, because
