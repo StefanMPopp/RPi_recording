@@ -130,6 +130,9 @@ def default_profile() -> dict:
             # Recorded region in full-sensor pixels, [x, y, width, height];
             # None = the whole frame
             "crop":           None,
+            # Fixed exposure from Settings -> Calibrate camera, see
+            # parse_exposure; None = automatic
+            "exposure":       None,
         },
         "metadata": {
             **METADATA_DEFAULTS,
@@ -138,6 +141,31 @@ def default_profile() -> dict:
             "px_per_cm":      None,
         },
     }
+
+
+def parse_exposure(value) -> dict | None:
+    """
+    A profile's fixed exposure, or None for automatic (also for anything
+    malformed, and for profiles saved before exposure could be fixed):
+
+        exposure_us:   exposure time in microseconds
+        analogue_gain: sensor gain, 1.0 or more
+        color_gains:  [red, blue] white-balance gains, or None
+    """
+    if not isinstance(value, dict):
+        return None
+    try:
+        exposure = {"exposure_us":   int(value["exposure_us"]),
+                    "analogue_gain": float(value["analogue_gain"]),
+                    "color_gains":  None}
+        color_gains = value.get("color_gains")
+        if isinstance(color_gains, (list, tuple)) and len(color_gains) == 2:
+            exposure["color_gains"] = [float(gain) for gain in color_gains]
+    except (KeyError, TypeError, ValueError):
+        return None
+    if exposure["exposure_us"] <= 0 or exposure["analogue_gain"] < 1.0:
+        return None
+    return exposure
 
 
 # =============================================================================

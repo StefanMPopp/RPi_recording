@@ -16,9 +16,13 @@
 | `config.py` | YAML load/save for app config and profiles. |
 | `constants.py` | Every tuneable value in one place. |
 | `formats.py` | The output formats, each with a stable key used by code and profiles. |
+| `calibration.py` | Analysis behind Settings → Calibrate camera: animal detection, brightness levels, speed, aperture sharpness, reading recordings. |
+| `calibration_window.py` | The calibration window. |
 
 Dependencies run one way: `main_window` imports the others; they do not import
-it. Everything except `main_window` is testable without Qt.
+it. The exception is `calibration_window`, which is part of the UI: it reuses
+the preview widget and palette from `main_window`, and `main_window` imports it
+only when the window opens. Everything except these two is testable without Qt.
 
 ---
 

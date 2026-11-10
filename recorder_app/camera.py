@@ -6,6 +6,7 @@ Wraps picamera2 for the recorder app.
 Responsibilities:
   - Enumerate available sensor modes (resolution × fps) at startup
   - Provide a low-fps preview stream as numpy arrays (for the Qt widget)
+  - Fix exposure time, gain and white balance, or leave them automatic
   - Start / stop full-resolution capture to disk
   - Report dropped frames
 
@@ -179,6 +180,16 @@ class PiCamera:
         # duration it was running at, in seconds
         self.last_frame_time_s: float | None = None
         self.last_frame_duration_s: float | None = None
+        # When the sensor exposed the last PREVIEW frame, in seconds; set
+        # before the preview callback runs, so the callback can read it
+        self.last_preview_time_s: float | None = None
+        # Metadata of the last frame delivered (exposure time, gain, ...)
+        self.last_metadata: dict = {}
+        # Fixed exposure (see set_exposure), or None for automatic
+        self._exposure: dict | None = None
+        # Automatic is the camera's default; it is only requested explicitly
+        # once a fixed exposure has been set, which it must then undo
+        self._exposure_was_fixed = False
         # Rotating frame buffers, keyed by shape — see _get_frame_buffer
         self._frame_buffers: dict = {}
         self._frame_buffer_index: dict = {}
@@ -292,7 +303,65 @@ class PiCamera:
             except Exception:
                 pass   # camera may be mid-reconfiguration; reapplied on restart
 
+    # ── Exposure ───────────────────────────────────────────────────────────────
+
+    def set_exposure(self, exposure: dict | None) -> None:
+        """
+        Fix the exposure, or return it to automatic with None.
+
+        exposure: {"exposure_us": int, "analogue_gain": float,
+                   "color_gains": [red, blue] or None}
+
+        Fixed values keep brightness identical through a recording and across
+        sessions, which tracking thresholds depend on. Color gains fix the
+        white balance; automatic white balance shifts luma too, so it is
+        fixed even for grayscale. Takes effect within a few frames, and from
+        the first frame of every later configuration.
+
+        An exposure time longer than one frame at the current frame rate is
+        shortened to the frame duration by the camera.
+        """
+        self._exposure = exposure
+        self._exposure_was_fixed |= exposure is not None
+        if self._camera_started:
+            try:
+                self._camera.set_controls(self._exposure_controls())
+            except Exception:
+                pass   # camera may be mid-reconfiguration; reapplied on restart
+
+    def exposure_limits(self) -> tuple[tuple[float, float], tuple[float, float]]:
+        """((min, max) exposure time in µs, (min, max) analogue gain)."""
+        controls = self._camera.camera_controls
+        exposure_range = controls.get("ExposureTime", (100, 1_000_000, None))
+        gain_range     = controls.get("AnalogueGain", (1.0, 16.0, None))
+        return ((float(exposure_range[0]), float(exposure_range[1])),
+                (max(1.0, float(gain_range[0])), float(gain_range[1])))
+
+    def _exposure_controls(self) -> dict:
+        if self._exposure is None:
+            if not self._exposure_was_fixed:
+                return {}
+            # picamera2 reads zero exposure time and gain as "automatic"
+            return {"ExposureTime": 0, "AnalogueGain": 0.0, "AwbEnable": True}
+        controls = {"ExposureTime": int(self._exposure["exposure_us"]),
+                    "AnalogueGain": float(self._exposure["analogue_gain"])}
+        color_gains = self._exposure.get("color_gains")
+        if color_gains:
+            controls["AwbEnable"]   = False
+            controls["ColourGains"] = tuple(float(gain) for gain in color_gains)
+        else:
+            controls["AwbEnable"]   = True
+        return controls
+
     # ── Preview ────────────────────────────────────────────────────────────────
+
+    @property
+    def preview_running(self) -> bool:
+        return self._preview_running
+
+    def set_preview_callback(self, callback: Callable[[np.ndarray], None]) -> None:
+        """Send preview frames to this callback instead, from the next frame on."""
+        self._preview_callback = callback
 
     def start_preview(self, callback: Callable[[np.ndarray], None], fps: int = 10) -> None:
         """
@@ -324,7 +393,7 @@ class PiCamera:
             lores = {"size":   (preview_width, preview_height),
                      "format": "YUV420"},   # lores must be YUV — converted below
             sensor = self._sensor_config(),
-            controls = self._frame_rate_controls(),
+            controls = self._configured_controls(),
         )
         self._camera.configure(preview_config)
         self._camera.start()
@@ -356,10 +425,18 @@ class PiCamera:
             loop_start = time.perf_counter()
             try:
                 try:
-                    yuv_frame = self._camera.capture_array("lores", wait=self._frame_timeout_s())
+                    request = self._camera.capture_request(wait=self._frame_timeout_s())
                 except TimeoutError:
                     self._on_stall()
                     continue
+                try:
+                    yuv_frame = request.make_array("lores")
+                    self.last_metadata = request.get_metadata()
+                finally:
+                    request.release()
+                sensor_timestamp_ns = self.last_metadata.get("SensorTimestamp")
+                self.last_preview_time_s = (sensor_timestamp_ns / 1e9 if sensor_timestamp_ns
+                                            else time.perf_counter())
                 if self._preview_channels == 1:
                     # Grayscale: just the Y (luma) plane — no color conversion,
                     # no risk of red/blue channel-order bugs, and cheaper per frame.
@@ -485,7 +562,7 @@ class PiCamera:
             lores = {"size": self._preview_stream_size(),
                      "format": "YUV420"},
             sensor = self._sensor_config(),
-            controls = self._frame_rate_controls(),
+            controls = self._configured_controls(),
         )
         self._camera.configure(recording_config)
         self._camera.start()
@@ -512,13 +589,16 @@ class PiCamera:
         return {"output_size": (self._active_mode.width, self._active_mode.height),
                 "bit_depth":   self._active_mode.bit_depth}
 
-    def _frame_rate_controls(self) -> dict:
+    def _configured_controls(self) -> dict:
         """
-        The frame rate as part of the configuration, so it applies from the
-        very first frame. Set only after start(), it takes effect a few frames
-        late, and those first frames come at the camera's default rate.
+        Frame rate and exposure as part of the configuration, so they apply
+        from the very first frame. Set only after start(), they take effect a
+        few frames late, and those first frames come at the camera's defaults.
         """
-        return {"FrameRate": self._target_fps} if self._target_fps else {}
+        controls = self._exposure_controls()
+        if self._target_fps:
+            controls["FrameRate"] = self._target_fps
+        return controls
 
     def set_recording_crop(self, crop: tuple[int, int, int, int] | None) -> None:
         """
@@ -675,6 +755,7 @@ class PiCamera:
 
         try:
             frame_metadata = request.get_metadata()
+            self.last_metadata = frame_metadata
             sensor_timestamp_ns = frame_metadata.get("SensorTimestamp")
             self.last_frame_time_s = (sensor_timestamp_ns / 1e9 if sensor_timestamp_ns
                                       else request_end)
@@ -718,7 +799,7 @@ class PiCamera:
         """
         Clean up after the camera failed to deliver a frame in time.
 
-        The timed-out request is still queued in picamera2; cancelling it
+        The timed-out request is still queued in picamera2; canceling it
         keeps it from blocking the camera's stop() — and with it closing the
         window. The next recording then restarts the camera instead of
         reusing a stream that may be stuck.
@@ -804,6 +885,9 @@ class StubCamera:
         self._recording_crop: tuple[int, int, int, int] | None = None
         self.last_frame_time_s: float | None = None
         self.last_frame_duration_s: float | None = None
+        self.last_preview_time_s: float | None = None
+        self.last_metadata: dict = {}
+        self._exposure: dict | None = None
         self._next_frame_at = 0.0
 
     def _fake_sensor_modes(self) -> list[SensorMode]:
@@ -836,6 +920,26 @@ class StubCamera:
     def set_capture_fps(self, fps: float) -> None:
         self._target_fps = fps   # stored for interface parity; stub ignores it
 
+    def set_exposure(self, exposure: dict | None) -> None:
+        self._exposure = exposure
+
+    def exposure_limits(self) -> tuple[tuple[float, float], tuple[float, float]]:
+        return ((100.0, 1_000_000.0), (1.0, 16.0))
+
+    def _stub_metadata(self) -> dict:
+        exposure = self._exposure or {"exposure_us": 10000, "analogue_gain": 1.0,
+                                      "color_gains": [2.0, 1.8]}
+        return {"ExposureTime": exposure["exposure_us"],
+                "AnalogueGain": exposure["analogue_gain"],
+                "ColourGains":  tuple(exposure.get("color_gains") or (2.0, 1.8))}
+
+    @property
+    def preview_running(self) -> bool:
+        return self._preview_running
+
+    def set_preview_callback(self, callback: Callable[[np.ndarray], None]) -> None:
+        self._preview_callback = callback
+
     def start_preview(self, callback: Callable[[np.ndarray], None], fps: int = 10) -> None:
         from constants import PREVIEW_WIDTH
         self._preview_callback = callback
@@ -858,7 +962,10 @@ class StubCamera:
                     frame = np.random.randint(
                         60, 180, (preview_height, preview_width, 3), dtype=np.uint8
                     )
-                callback(frame)
+                self.last_preview_time_s = time.perf_counter()
+                self.last_metadata = self._stub_metadata()
+                if self._preview_callback is not None:
+                    self._preview_callback(frame)
                 elapsed = time.perf_counter() - start
                 time.sleep(max(0.0, frame_interval - elapsed))
 
@@ -913,6 +1020,7 @@ class StubCamera:
             recording_frame = np.ascontiguousarray(
                 full_frame[y:y + crop_height, x:x + crop_width])
         self.last_frame_time_s = time.perf_counter()
+        self.last_metadata = self._stub_metadata()
         display_frame = full_frame if want_preview else None
         if timings is not None:
             timings["wait_ms"] = timings["copy_ms"] = timings["preview_ms"] = 0.0

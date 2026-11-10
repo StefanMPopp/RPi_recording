@@ -49,7 +49,7 @@ from constants  import (
     SNAPSHOT_SKIP_FRAMES,
 )
 from config     import (load_app_config, save_app_config, load_profile, save_profile,
-                        default_profile, LEGACY_COLOR_MODES)
+                        default_profile, parse_exposure, LEGACY_COLOR_MODES)
 from benchmark  import get_free_space_gb
 from camera     import make_camera, SensorMode
 from record     import (RecordingSession, RecordingSettings,
@@ -959,6 +959,12 @@ class MainWindow(QMainWindow):
         # the crop is switched off, so switching it on again restores it.
         self._crop_sensor: tuple[int, int, int, int] | None = None
 
+        # Fixed exposure (see config.parse_exposure), or None for automatic.
+        # Set in Settings -> Calibrate camera, saved with the profile.
+        self._exposure: dict | None = None
+        # Arena region last drawn in the calibration window, normalized
+        self._calibration_region: tuple[float, float, float, float] | None = None
+
         # Recording state
         self._session: RecordingSession | None = None
         self._is_finishing = False
@@ -980,6 +986,7 @@ class MainWindow(QMainWindow):
         self._on_format_changed(self._format_combo.currentIndex())
         self._on_scale_mode_changed()          # sets which scale field is editable
         self._on_auto_name_toggled(0)          # applies auto file naming
+        self._refresh_exposure_label()
         self._ensure_save_dir_usable()
         self._refresh_free_space()
         self._start_preview()
@@ -1013,6 +1020,10 @@ class MainWindow(QMainWindow):
         measure_fps_action = QAction("Measure maximum fps for current settings…", self)
         measure_fps_action.triggered.connect(self._on_measure_max_fps)
         settings_menu.addAction(measure_fps_action)
+
+        calibrate_action = QAction("Calibrate camera (exposure, speed, aperture)…", self)
+        calibrate_action.triggered.connect(self._on_calibrate_camera)
+        settings_menu.addAction(calibrate_action)
 
         settings_menu.addSeparator()
 
@@ -1205,6 +1216,25 @@ class MainWindow(QMainWindow):
         fps_row.addWidget(self._fps_info_btn)
         fps_row.addStretch()
         layout.addLayout(fps_row, row, 1)
+        row += 1
+
+        # Exposure — automatic, or fixed in Settings → Calibrate camera
+        layout.addWidget(self._dim_label("Exposure"), row, 0)
+        exposure_row = QHBoxLayout()
+        exposure_row.setSpacing(6)
+        self._exposure_label = QLabel("")
+        self._exposure_label.setTextFormat(Qt.TextFormat.RichText)
+        self._exposure_label.setStyleSheet("font-size: 12px;")
+        self._exposure_label.setWordWrap(True)
+        exposure_row.addWidget(self._exposure_label, stretch=1)
+        exposure_row.addWidget(InfoButton(
+            "Automatic exposure adjusts brightness continuously.\n"
+            "Fixed exposure keeps exposure time, gain and white\n"
+            "balance constant, so tracking thresholds fit every video.\n\n"
+            "Set it in Settings → Calibrate camera. It is saved with\n"
+            "the profile."
+        ))
+        layout.addLayout(exposure_row, row, 1)
         row += 1
 
         # Color mode — grayscale uses only the Y plane (1 byte/px instead of 3)
@@ -1877,10 +1907,59 @@ class MainWindow(QMainWindow):
             self._sync_crop_ui()
 
         self._refresh_headroom()
+        self._refresh_exposure_label()
 
     def _on_fps_changed(self, value: float) -> None:
         self._camera.set_capture_fps(value)
         self._refresh_headroom()
+        self._refresh_exposure_label()
+
+    # ── Exposure ──────────────────────────────────────────────────────────────
+
+    def _set_exposure(self, exposure: dict | None) -> None:
+        self._exposure = exposure
+        self._camera.set_exposure(exposure)
+        self._refresh_exposure_label()
+
+    def _refresh_exposure_label(self) -> None:
+        if not hasattr(self, "_exposure_label"):
+            return
+        if self._exposure is None:
+            self._exposure_label.setText("automatic")
+            return
+        exposure_ms = self._exposure["exposure_us"] / 1000
+        text = (f"fixed: {exposure_ms:.2f} ms, "
+                f"gain {self._exposure['analogue_gain']:.2f}")
+        frame_ms = 1000 / self._fps_spin.value()
+        if exposure_ms > frame_ms:
+            text += (f"<br><span style='color:{COLOR['amber']}'>longer than one frame "
+                     f"at this fps: shortened to {frame_ms:.1f} ms</span>")
+        self._exposure_label.setText(text)
+
+    def _on_calibrate_camera(self) -> None:
+        from calibration_window import CalibrationWindow
+        from PyQt6.QtWidgets import QDialog, QMessageBox
+
+        if self._is_recording or self._is_finishing:
+            QMessageBox.information(self, "Recording in progress",
+                                    "Stop the current recording before calibrating.")
+            return
+        window = CalibrationWindow(
+            self, self._camera, self._current_sensor_mode(), self._fps_spin.value(),
+            px_per_cm = self._px_per_cm_spin.value() or None,
+            exposure  = self._exposure,
+            region    = self._calibration_region,
+            save_dir  = Path(self._save_dir_edit.text()).expanduser(),
+        )
+        accepted = window.exec() == QDialog.DialogCode.Accepted
+        self._calibration_region = window.region
+        # Preview frames come back to this window
+        self._camera.set_preview_callback(lambda frame: self.frame_ready.emit(frame))
+        if accepted:
+            self._set_exposure(window.exposure)
+            self._bottom_status.setText(
+                "Exposure: " + ("automatic" if window.exposure is None else
+                                "fixed — save the profile to keep it"))
 
     # ── Scale: px/cm and frame width are two views of the same number ─────────
 
@@ -2887,6 +2966,7 @@ class MainWindow(QMainWindow):
                 "color_mode": self._color_combo.currentText(),
                 "crop":       (list(self._crop_sensor)
                                if self._crop_check.isChecked() and self._crop_sensor else None),
+                "exposure":   self._exposure,
             },
             "metadata": {
                 **self._field_list.get_field_values(),
@@ -2971,6 +3051,8 @@ class MainWindow(QMainWindow):
             else:
                 self._crop_check.setChecked(False)
             self._sync_crop_ui()
+        # A profile without an exposure was recorded with automatic exposure
+        self._set_exposure(parse_exposure(cam.get("exposure")))
 
     # =========================================================================
     # Helpers

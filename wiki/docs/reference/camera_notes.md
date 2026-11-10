@@ -132,11 +132,27 @@ A fixed 16:9 preview against a 4:3 sensor mode crops the image before it ever
 reaches the display. The preview height is therefore derived from the active
 mode. Both dimensions must be even — YUV420 requires it.
 
+### Fixed exposure needs the exposure modes
+
+Since libcamera 0.5, a fixed `ExposureTime` or `AnalogueGain` only takes effect
+with `ExposureTimeMode` or `AnalogueGainMode` set to manual. picamera2 sets
+these modes for you: a non-zero value means manual, and **zero means
+automatic again**. `PiCamera.set_exposure()` relies on this.
+
+Two side effects:
+
+- **Exposure is capped by the frame duration.** At a fixed frame rate, an
+  exposure longer than one frame is shortened to the frame duration.
+- **White balance is fixed too** (`AwbEnable` off, fixed `ColourGains`), even
+  for grayscale. The luma plane is computed after white balance, so automatic
+  white balance would still shift the brightness.
+
 ### Framerate affects exposure
 
-Setting `FrameRate` also constrains exposure time. At low framerates the sensor
-can expose longer, so the image brightens. This is why the preview applies the
-recording framerate: what you see reflects what you will record.
+With automatic exposure, setting `FrameRate` also constrains exposure time.
+At low framerates the sensor can expose longer, so the image brightens. This is
+why the preview applies the recording framerate: what you see reflects what you
+will record.
 
 ---
 

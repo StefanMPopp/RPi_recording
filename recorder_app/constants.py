@@ -126,6 +126,46 @@ SNAPSHOT_SKIP_FRAMES = 2
 # to 4 can help when encoding dominates, at the cost of preview smoothness.
 IMAGE_STACK_WORKERS = 3
 
+# ── Camera calibration (Settings -> Calibrate camera) ─────────────────────────
+# Brightness targets, 0-255. The background should be bright but never
+# clipped: clipping hides uneven light and the glow eats thin appendages.
+# Animals should stay clear of black so pose estimation keeps body detail.
+CALIBRATION_BACKGROUND_TARGET = (200, 240)
+CALIBRATION_ANIMAL_TARGET     = (15, 90)
+
+# Animal detection: a pixel belongs to an animal when it is darker than the
+# background image by both this fraction and this many levels
+CALIBRATION_DARKER_FRACTION   = 0.25
+CALIBRATION_DARKER_LEVELS     = 20
+CALIBRATION_MIN_BLOB_PX       = 8        # in preview pixels; smaller is noise
+
+# The live background image is the per-pixel median of this many frames,
+# one taken every this many seconds. Animals that stay still for about half
+# of that window become part of the background.
+CALIBRATION_BACKGROUND_FRAMES     = 15
+CALIBRATION_BACKGROUND_INTERVAL_S = 0.5
+
+# Speeds are measured between frames this far apart, in live preview and
+# recordings alike, so both give comparable numbers
+CALIBRATION_SPEED_STEP_S      = 0.1
+# Recordings are analyzed for at most this long from the start
+CALIBRATION_MAX_VIDEO_S       = 300
+
+# Motion blur allowed during one exposure, in recorded pixels (editable in
+# the window). With a body length and a scale it is this fraction of the
+# body length, within the range: below 1 px blur is hidden by the lens and
+# pixel grid anyway, and above 3 px it closes the gap between touching
+# animals and fades thin legs whatever the body size.
+CALIBRATION_BLUR_BUDGET_PX    = 1.0
+CALIBRATION_BLUR_FRACTION     = 0.02
+CALIBRATION_BLUR_RANGE_PX     = (1.0, 3.0)
+# Travel per frame, in body lengths: up to the first value is fine for
+# identity tracking through encounters, up to the second marginal
+CALIBRATION_TRAVEL_PER_FRAME  = (0.5, 1.0)
+
+# f-numbers marked on the lens ring (16 mm f/1.4 C-mount lens)
+CALIBRATION_F_STOPS = ["1.4", "2", "2.8", "4", "5.6", "8", "11", "16"]
+
 # ── Metadata defaults ──────────────────────────────────────────────────────────
 # Treatments are not listed here — they are user-defined name/value pairs.
 METADATA_DEFAULTS = {

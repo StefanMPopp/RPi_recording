@@ -59,6 +59,13 @@ area**, not just a smaller image. See
 the field. Lower framerates are the simplest way to reduce data rate without
 losing resolution, and are ideal for slow behaviors or long recordings.
 
+**Exposure** — *automatic*, or the fixed exposure time and gain set in
+**Settings → Calibrate camera** (see
+[exposure, gain and aperture](choosing_settings.md#exposure-gain-and-aperture)).
+Profiles save it; a profile saved without one loads as automatic. A fixed
+exposure longer than one frame is shortened to the frame duration, which the
+line points out in amber.
+
 **Color** — Grayscale (default) or Color. Grayscale records only the
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.
@@ -181,6 +188,12 @@ Press ++q++ or click **Stop recording** to finish.
 flat out for a few seconds (about 25 s in total) and fills the capacity table
 for the current resolution and color mode. Test footage goes to a hidden folder
 in the save directory and is deleted.
+
+**Settings → Calibrate camera (exposure, speed, aperture)** — opens the
+calibration window: fixed exposure and gain with a brightness check, the
+animals' speed and what it allows for exposure time and frame rate, and a
+guided aperture sweep. See
+[exposure, gain and aperture](choosing_settings.md#exposure-gain-and-aperture).
 
 **Settings → Recalibrate write speed** — measures the SD card's sustained write
 speed by writing a 400 MB test file and forcing it onto the card, taking 10–20

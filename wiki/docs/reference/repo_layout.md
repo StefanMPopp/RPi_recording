@@ -13,6 +13,8 @@ RPi_recording/
 │   ├── config.py                 YAML load/save
 │   ├── constants.py              all tuneable values
 │   ├── formats.py                output formats (MJPEG, TIFF, PNG, H.264)
+│   ├── calibration.py            exposure/speed/aperture analysis
+│   ├── calibration_window.py     Settings → Calibrate camera
 │   ├── requirements.txt          pip dependencies only
 │   └── example_metadata_list.csv
 │

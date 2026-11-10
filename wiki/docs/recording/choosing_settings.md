@@ -169,6 +169,144 @@ Read the **Limited by** column — the fix depends on it:
 
 ---
 
+## Exposure, gain and aperture
+
+Open **Settings → Calibrate camera** with the arena, the lighting and the
+animals in place. The orange frame starts on the whole image; drag its edges
+onto the arena floor. Everything the window measures is taken from inside
+that frame.
+
+Work through it in this order. Each step fixes one variable, and later steps
+depend on earlier ones.
+
+1. **Lighting.** Make the white background as even as possible. Uneven light
+   costs more than any camera setting, because one tracking threshold then
+   cannot fit the whole arena.
+2. **Aperture.** Run the aperture sweep, described below. It finds the f-stop
+   with the sharpest corners and tells you how much light each f-stop costs.
+3. **Speed.** Measure how fast the animals move. This gives the longest
+   exposure time that keeps motion blur small.
+4. **Exposure time.** Click **Use this exposure** next to the exposure time
+   the speed section suggests.
+5. **Gain.** Leave it at 1. If the background marker falls below its green
+   range, add light or open the aperture by a stop. Raise the gain only as a
+   last resort, because it amplifies noise along with the image.
+
+Click **Apply**, then **File → Save profile** to keep the result.
+
+### Why fixed exposure
+
+Automatic exposure adjusts brightness all the time. It also aims for mid-gray,
+so a mostly white arena comes out gray. Tracking tools such as idtracker.ai
+segment animals with brightness thresholds, which then fit one video but not
+the next, or not even the whole of one. A fixed exposure time, gain and white
+balance keep every recording alike.
+
+### The brightness check
+
+Instead of a histogram, the window shows two markers on a black-to-white bar:
+
+- **background**: the typical value of the arena floor. Target 200–240:
+  bright, with headroom before white clips.
+- **animals**: the typical value of the animals. Target 15–90: clearly dark,
+  but not black, so pose estimation keeps detail inside the body.
+
+Animals are what moves. The window builds an image of the arena from the past
+few seconds, and only blobs clearly darker than that image count as animals.
+Dark tape, the arena rim and shadows never move, so they are part of the
+background image and are not counted. An animal that stays still for several
+seconds disappears from detection until it moves again.
+
+Pixels that are pure white are painted red on the preview, and pure black
+ones blue.
+
+### Speed, exposure time and frame rate
+
+These two settings affect tracking in different ways:
+
+- **Exposure time sets motion blur.** Blur merges animals that touch into one
+  blob, fades legs and antennae, and makes the images trackers use to tell
+  individuals apart less distinct.
+- **Frame rate sets how far an animal moves between frames.** When two
+  animals meet, that distance decides whether the tracker can follow which is
+  which. Identity swaps after encounters are mainly a frame-rate problem.
+
+**Measure live** follows the animals for as long as you let it run; a minute
+or more of normal behavior is a good sample. **Analyze a recording…** does the
+same on the first five minutes of an AVI, MP4 or image stack recorded by this
+app, taking the scale and frame times from its metadata.
+
+Both report the 95th and 99th percentile and the fastest speed while the
+animals move. Resting time is left out, so it does not pull the numbers down.
+The 95th percentile is filled into **Plan for**, which you can edit. From it
+the window shows:
+
+- **Exposure time**: the longest exposure that keeps the motion blur within
+  **Blur allowed**, at most one frame. **Use this exposure** switches to
+  Fixed with that value; the line below compares it with the exposure in use
+  now.
+- how far an animal moves between frames at the current frame rate, in body
+  lengths once you enter the **Body length**. Up to 0.5 is good, up to 1 is
+  marginal.
+- the frame rate needed to stay within 0.5 body lengths per frame
+
+**Blur allowed** is in recorded pixels, 1 px by default. Once the body length
+and the scale are both entered, it is filled in from the animals' length in
+pixels: 2 % of it, but at least 1 px and at most 3 px. Larger animals tolerate
+more blur, but beyond a few pixels blur closes the gap between touching
+animals and fades thin legs, whatever the body size. Below 1 px it makes no
+difference, because the lens and the pixel grid already soften edges by about
+that much. You can still edit the value; changing the body length or scale
+fills it in again.
+
+The preview shows a bar as long as the distance an animal covers in one second
+at the planned speed, with a tick for every frame. Zoom in (Ctrl + scroll)
+to compare it with the animals.
+
+!!! note "Measured speeds understate encounters"
+    Matches that could be wrong, such as animals touching, are left out of
+    the speed measurement. If animals speed up when they meet, plan for the
+    99th percentile instead.
+
+The speed needs the scale (px/cm). The window takes it from the main window;
+if it is not set there, enter it in the window.
+
+### The aperture sweep
+
+Animals are not needed for this; flat printed targets are better, because they
+hold still between measurements.
+
+1. Lay targets with fine black print (text, a printed checkerboard) on the
+   arena floor: one in the center and one in each corner of the orange frame.
+   A printed resolution test chart works too, if it reaches the corners of
+   the frame: only the center and the four corners are measured.
+2. Open the aperture fully (lowest f-number) and focus on the center
+   target. Focus is most precise when the depth of field is shallowest. Do
+   not refocus after this.
+3. Set the lens ring to an f-stop, choose the same value in the window and
+   click **Measure**. Exposure is automatic during the measurement, so every
+   f-stop is compared at the same brightness.
+4. Repeat for each f-stop up to f/8.
+
+For each f-stop, the table shows:
+
+| Column | Meaning |
+|---|---|
+| Edge center / Worst corner | How many pixels a black-to-white edge is spread over. 1 px is perfectly sharp. |
+| Evenness | The darkest corner's white as a share of the center's (vignetting). |
+| Light | How much more light the f-stop needs than the brightest one measured. |
+
+The recommendation is the f-stop with the most light among those whose corners
+are within 10 % of the sharpest result and whose evenness is at least 85 %.
+Wide open, most lenses are soft and darken toward the corners; stopped far
+down, diffraction blurs them again. Expect the best result two or three stops
+above the lowest f-number.
+
+Each full stop halves the light. Make up for it with brighter lighting rather
+than a longer exposure (more motion blur) or more gain (more noise).
+
+---
+
 ## Worked examples
 
 === "Ant trail following"
