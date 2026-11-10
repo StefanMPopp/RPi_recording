@@ -742,6 +742,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../setup/standalone_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on a single Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../setup/replace_dev_pi/" class="md-nav__link">
         
   
@@ -1168,6 +1196,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed-exposure-needs-the-exposure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed exposure needs the exposure modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#framerate-affects-exposure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1410,6 +1449,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#fixed-exposure-needs-the-exposure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed exposure needs the exposure modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#framerate-affects-exposure" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1629,13 +1679,27 @@ preview automatically if one is active.</p>
 <p>A fixed 16:9 preview against a 4:3 sensor mode crops the image before it ever
 reaches the display. The preview height is therefore derived from the active
 mode. Both dimensions must be even — YUV420 requires it.</p>
+<h3 id="fixed-exposure-needs-the-exposure-modes">Fixed exposure needs the exposure modes<a class="headerlink" href="#fixed-exposure-needs-the-exposure-modes" title="Permanent link">&para;</a></h3>
+<p>Since libcamera 0.5, a fixed <code>ExposureTime</code> or <code>AnalogueGain</code> only takes effect
+with <code>ExposureTimeMode</code> or <code>AnalogueGainMode</code> set to manual. picamera2 sets
+these modes for you: a non-zero value means manual, and <strong>zero means
+automatic again</strong>. <code>PiCamera.set_exposure()</code> relies on this.</p>
+<p>Two side effects:</p>
+<ul>
+<li><strong>Exposure is capped by the frame duration.</strong> At a fixed frame rate, an
+  exposure longer than one frame is shortened to the frame duration.</li>
+<li><strong>White balance is fixed too</strong> (<code>AwbEnable</code> off, fixed <code>ColourGains</code>), even
+  for grayscale. The luma plane is computed after white balance, so automatic
+  white balance would still shift the brightness.</li>
+</ul>
 <h3 id="framerate-affects-exposure">Framerate affects exposure<a class="headerlink" href="#framerate-affects-exposure" title="Permanent link">&para;</a></h3>
-<p>Setting <code>FrameRate</code> also constrains exposure time. At low framerates the sensor
-can expose longer, so the image brightens. This is why the preview applies the
-recording framerate: what you see reflects what you will record.</p>
+<p>With automatic exposure, setting <code>FrameRate</code> also constrains exposure time.
+At low framerates the sensor can expose longer, so the image brightens. This is
+why the preview applies the recording framerate: what you see reflects what you
+will record.</p>
 <hr />
 <h2 id="camera-not-detected">Camera not detected<a class="headerlink" href="#camera-not-detected" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>libcamera-hello<span class="w"> </span>--list-cameras
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>rpicam-hello<span class="w"> </span>--list-cameras
 </code></pre></div>
 <p>If the IMX477 is absent:</p>
 <ol>
@@ -1657,15 +1721,15 @@ recording framerate: what you see reflects what you will record.</p>
 <tbody>
 <tr>
 <td>List cameras and modes</td>
-<td><code>libcamera-hello --list-cameras</code></td>
+<td><code>rpicam-hello --list-cameras</code></td>
 </tr>
 <tr>
 <td>Quick preview test</td>
-<td><code>libcamera-hello -t 5000</code></td>
+<td><code>rpicam-hello -t 5000</code></td>
 </tr>
 <tr>
 <td>Capture a still</td>
-<td><code>libcamera-still -o test.jpg</code></td>
+<td><code>rpicam-still -o test.jpg</code></td>
 </tr>
 <tr>
 <td>Temperature</td>
@@ -1677,6 +1741,8 @@ recording framerate: what you see reflects what you will record.</p>
 </tr>
 </tbody>
 </table>
+<p>Raspberry Pi OS releases before late 2023 call these tools <code>libcamera-hello</code> and
+<code>libcamera-still</code>; current releases only have the <code>rpicam-</code> names.</p>
 <p><code>get_throttled</code> returning anything other than <code>0x0</code> means the Pi has been
 throttled at some point — worth checking when a rig drops frames at settings
 that work elsewhere.</p>

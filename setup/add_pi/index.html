@@ -16,7 +16,7 @@
         <link rel="prev" href="../dev_pi/">
       
       
-        <link rel="next" href="../replace_dev_pi/">
+        <link rel="next" href="../standalone_pi/">
       
       
         
@@ -971,6 +971,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../standalone_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on a single Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../replace_dev_pi/" class="md-nav__link">
         
   
@@ -1538,6 +1566,11 @@
 waiting for downloads.</p>
 <p>Two parts: <strong>manual preparation</strong> needing physical access, then
 <strong>bootstrapping</strong>, which is automatic.</p>
+<div class="admonition tip">
+<p class="admonition-title">No dev Pi at hand?</p>
+<p>To set up a single Pi directly with a keyboard and monitor, without SSH or
+Ansible, see <a href="../standalone_pi/">Install on a single Pi</a>.</p>
+</div>
 <hr />
 <h2 id="part-1-manual-preparation">Part 1 — Manual preparation<a class="headerlink" href="#part-1-manual-preparation" title="Permanent link">&para;</a></h2>
 <h3 id="11-flash-the-os">1.1 Flash the OS<a class="headerlink" href="#11-flash-the-os" title="Permanent link">&para;</a></h3>
@@ -1556,7 +1589,7 @@ waiting for downloads.</p>
 </ol>
 <h3 id="12-enable-the-camera">1.2 Enable the camera<a class="headerlink" href="#12-enable-the-camera" title="Permanent link">&para;</a></h3>
 <p>The HQ camera normally works out of the box on current Raspberry Pi OS. Confirm:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>libcamera-hello<span class="w"> </span>--list-cameras
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rpicam-hello<span class="w"> </span>--list-cameras
 </code></pre></div>
 <p>If the IMX477 is not listed, check the ribbon cable at both ends before
 anything else.</p>

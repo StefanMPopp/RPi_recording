@@ -742,6 +742,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../setup/standalone_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on a single Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../setup/replace_dev_pi/" class="md-nav__link">
         
   
@@ -1440,10 +1468,20 @@
 <td><code>formats.py</code></td>
 <td>The output formats, each with a stable key used by code and profiles.</td>
 </tr>
+<tr>
+<td><code>calibration.py</code></td>
+<td>Analysis behind Settings → Calibrate camera: animal detection, brightness levels, speed, aperture sharpness, reading recordings.</td>
+</tr>
+<tr>
+<td><code>calibration_window.py</code></td>
+<td>The calibration window.</td>
+</tr>
 </tbody>
 </table>
 <p>Dependencies run one way: <code>main_window</code> imports the others; they do not import
-it. Everything except <code>main_window</code> is testable without Qt.</p>
+it. The exception is <code>calibration_window</code>, which is part of the UI: it reuses
+the preview widget and palette from <code>main_window</code>, and <code>main_window</code> imports it
+only when the window opens. Everything except these two is testable without Qt.</p>
 <hr />
 <h2 id="threading">Threading<a class="headerlink" href="#threading" title="Permanent link">&para;</a></h2>
 <p>Three threads:</p>

@@ -702,6 +702,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#exposure-gain-and-aperture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exposure, gain and aperture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exposure, gain and aperture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-fixed-exposure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why fixed exposure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-brightness-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The brightness check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#speed-exposure-time-and-frame-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Speed, exposure time and frame rate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-aperture-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The aperture sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#worked-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -879,6 +940,34 @@
     
   
     Add a new Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../setup/standalone_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on a single Pi
   
 
     
@@ -1359,6 +1448,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#exposure-gain-and-aperture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exposure, gain and aperture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exposure, gain and aperture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-fixed-exposure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why fixed exposure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-brightness-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The brightness check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#speed-exposure-time-and-frame-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Speed, exposure time and frame rate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-aperture-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The aperture sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#worked-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1651,6 +1801,145 @@ unmeasured combination shows it as not measured.</p>
 measurement). Re-run it after swapping the card. Cards also slow as they fill
 and age.</p>
 </div>
+<hr />
+<h2 id="exposure-gain-and-aperture">Exposure, gain and aperture<a class="headerlink" href="#exposure-gain-and-aperture" title="Permanent link">&para;</a></h2>
+<p>Open <strong>Settings → Calibrate camera</strong> with the arena, the lighting and the
+animals in place. The orange frame starts on the whole image; drag its edges
+onto the arena floor. Everything the window measures is taken from inside
+that frame.</p>
+<p>Work through it in this order. Each step fixes one variable, and later steps
+depend on earlier ones.</p>
+<ol>
+<li><strong>Lighting.</strong> Make the white background as even as possible. Uneven light
+   costs more than any camera setting, because one tracking threshold then
+   cannot fit the whole arena.</li>
+<li><strong>Aperture.</strong> Run the aperture sweep, described below. It finds the f-stop
+   with the sharpest corners and tells you how much light each f-stop costs.</li>
+<li><strong>Speed.</strong> Measure how fast the animals move. This gives the longest
+   exposure time that keeps motion blur small.</li>
+<li><strong>Exposure time.</strong> Click <strong>Use this exposure</strong> next to the exposure time
+   the speed section suggests.</li>
+<li><strong>Gain.</strong> Leave it at 1. If the background marker falls below its green
+   range, add light or open the aperture by a stop. Raise the gain only as a
+   last resort, because it amplifies noise along with the image.</li>
+</ol>
+<p>Click <strong>Apply</strong>, then <strong>File → Save profile</strong> to keep the result.</p>
+<h3 id="why-fixed-exposure">Why fixed exposure<a class="headerlink" href="#why-fixed-exposure" title="Permanent link">&para;</a></h3>
+<p>Automatic exposure adjusts brightness all the time. It also aims for mid-gray,
+so a mostly white arena comes out gray. Tracking tools such as idtracker.ai
+segment animals with brightness thresholds, which then fit one video but not
+the next, or not even the whole of one. A fixed exposure time, gain and white
+balance keep every recording alike.</p>
+<h3 id="the-brightness-check">The brightness check<a class="headerlink" href="#the-brightness-check" title="Permanent link">&para;</a></h3>
+<p>Instead of a histogram, the window shows two markers on a black-to-white bar:</p>
+<ul>
+<li><strong>background</strong>: the typical value of the arena floor. Target 200–240:
+  bright, with headroom before white clips.</li>
+<li><strong>animals</strong>: the typical value of the animals. Target 15–90: clearly dark,
+  but not black, so pose estimation keeps detail inside the body.</li>
+</ul>
+<p>Animals are what moves. The window builds an image of the arena from the past
+few seconds, and only blobs clearly darker than that image count as animals.
+Dark tape, the arena rim and shadows never move, so they are part of the
+background image and are not counted. An animal that stays still for several
+seconds disappears from detection until it moves again.</p>
+<p>Pixels that are pure white are painted red on the preview, and pure black
+ones blue.</p>
+<h3 id="speed-exposure-time-and-frame-rate">Speed, exposure time and frame rate<a class="headerlink" href="#speed-exposure-time-and-frame-rate" title="Permanent link">&para;</a></h3>
+<p>These two settings affect tracking in different ways:</p>
+<ul>
+<li><strong>Exposure time sets motion blur.</strong> Blur merges animals that touch into one
+  blob, fades legs and antennae, and makes the images trackers use to tell
+  individuals apart less distinct.</li>
+<li><strong>Frame rate sets how far an animal moves between frames.</strong> When two
+  animals meet, that distance decides whether the tracker can follow which is
+  which. Identity swaps after encounters are mainly a frame-rate problem.</li>
+</ul>
+<p><strong>Measure live</strong> follows the animals for as long as you let it run; a minute
+or more of normal behavior is a good sample. <strong>Analyze a recording…</strong> does the
+same on the first five minutes of an AVI, MP4 or image stack recorded by this
+app, taking the scale and frame times from its metadata.</p>
+<p>Both report the 95th and 99th percentile and the fastest speed while the
+animals move. Resting time is left out, so it does not pull the numbers down.
+The 95th percentile is filled into <strong>Plan for</strong>, which you can edit. From it
+the window shows:</p>
+<ul>
+<li><strong>Exposure time</strong>: the longest exposure that keeps the motion blur within
+  <strong>Blur allowed</strong>, at most one frame. <strong>Use this exposure</strong> switches to
+  Fixed with that value; the line below compares it with the exposure in use
+  now.</li>
+<li>how far an animal moves between frames at the current frame rate, in body
+  lengths once you enter the <strong>Body length</strong>. Up to 0.5 is good, up to 1 is
+  marginal.</li>
+<li>the frame rate needed to stay within 0.5 body lengths per frame</li>
+</ul>
+<p><strong>Blur allowed</strong> is in recorded pixels, 1 px by default. Once the body length
+and the scale are both entered, it is filled in from the animals' length in
+pixels: 2 % of it, but at least 1 px and at most 3 px. Larger animals tolerate
+more blur, but beyond a few pixels blur closes the gap between touching
+animals and fades thin legs, whatever the body size. Below 1 px it makes no
+difference, because the lens and the pixel grid already soften edges by about
+that much. You can still edit the value; changing the body length or scale
+fills it in again.</p>
+<p>The preview shows a bar as long as the distance an animal covers in one second
+at the planned speed, with a tick for every frame. Zoom in (Ctrl + scroll)
+to compare it with the animals.</p>
+<div class="admonition note">
+<p class="admonition-title">Measured speeds understate encounters</p>
+<p>Matches that could be wrong, such as animals touching, are left out of
+the speed measurement. If animals speed up when they meet, plan for the
+99th percentile instead.</p>
+</div>
+<p>The speed needs the scale (px/cm). The window takes it from the main window;
+if it is not set there, enter it in the window.</p>
+<h3 id="the-aperture-sweep">The aperture sweep<a class="headerlink" href="#the-aperture-sweep" title="Permanent link">&para;</a></h3>
+<p>Animals are not needed for this; flat printed targets are better, because they
+hold still between measurements.</p>
+<ol>
+<li>Lay targets with fine black print (text, a printed checkerboard) on the
+   arena floor: one in the center and one in each corner of the orange frame.
+   A printed resolution test chart works too, if it reaches the corners of
+   the frame: only the center and the four corners are measured. A chart
+   is included: <a href="../lens_calibration.jpg">lens_calibration.jpg</a>, also at
+   <code>~/RPi_recording/wiki/docs/recording/lens_calibration.jpg</code> on every Pi.</li>
+<li>Open the aperture fully (lowest f-number) and focus on the center
+   target. Focus is most precise when the depth of field is shallowest. Do
+   not refocus after this.</li>
+<li>Set the lens ring to an f-stop, choose the same value in the window and
+   click <strong>Measure</strong>. Exposure is automatic during the measurement, so every
+   f-stop is compared at the same brightness.</li>
+<li>Repeat for each f-stop up to f/8.</li>
+</ol>
+<p>For each f-stop, the table shows:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Edge center / Worst corner</td>
+<td>How many pixels a black-to-white edge is spread over. 1 px is perfectly sharp.</td>
+</tr>
+<tr>
+<td>Evenness</td>
+<td>The darkest corner's white as a share of the center's (vignetting).</td>
+</tr>
+<tr>
+<td>Light</td>
+<td>How much more light the f-stop needs than the brightest one measured.</td>
+</tr>
+</tbody>
+</table>
+<p>The recommendation is the f-stop with the most light among those whose corners
+are within 10 % of the sharpest result and whose evenness is at least 85 %.
+Wide open, most lenses are soft and darken toward the corners; stopped far
+down, diffraction blurs them again. Expect the best result two or three stops
+above the lowest f-number.</p>
+<p>Each full stop halves the light. Make up for it with brighter lighting rather
+than a longer exposure (more motion blur) or more gain (more noise).</p>
 <hr />
 <h2 id="worked-examples">Worked examples<a class="headerlink" href="#worked-examples" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Ant trail following</label><label for="__tabbed_1_2">Fly escape responses</label><label for="__tabbed_1_3">Colony-level timelapse</label><label for="__tabbed_1_4">Color-marked individuals</label></div>

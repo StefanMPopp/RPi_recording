@@ -888,6 +888,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../setup/standalone_pi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on a single Pi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../setup/replace_dev_pi/" class="md-nav__link">
         
   
@@ -1451,6 +1479,12 @@ area</strong>, not just a smaller image. See
 <p><strong>Framerate</strong> — any value up to the mode's maximum, shown as <code>max NN.N</code> beside
 the field. Lower framerates are the simplest way to reduce data rate without
 losing resolution, and are ideal for slow behaviors or long recordings.</p>
+<p><strong>Exposure</strong> — <em>automatic</em>, or the fixed exposure time and gain set in
+<strong>Settings → Calibrate camera</strong> (see
+<a href="../choosing_settings/#exposure-gain-and-aperture">exposure, gain and aperture</a>).
+Profiles save it; a profile saved without one loads as automatic. A fixed
+exposure longer than one frame is shortened to the frame duration, which the
+line points out in amber.</p>
 <p><strong>Color</strong> — Grayscale (default) or Color. Grayscale records only the
 brightness channel: about 3× smaller for image stacks, 2.5× for MJPEG, and no
 loss for tracking purposes.</p>
@@ -1572,6 +1606,11 @@ salvageable if you notice early.</p>
 flat out for a few seconds (about 25 s in total) and fills the capacity table
 for the current resolution and color mode. Test footage goes to a hidden folder
 in the save directory and is deleted.</p>
+<p><strong>Settings → Calibrate camera (exposure, speed, aperture)</strong> — opens the
+calibration window: fixed exposure and gain with a brightness check, the
+animals' speed and what it allows for exposure time and frame rate, and a
+guided aperture sweep. See
+<a href="../choosing_settings/#exposure-gain-and-aperture">exposure, gain and aperture</a>.</p>
 <p><strong>Settings → Recalibrate write speed</strong> — measures the SD card's sustained write
 speed by writing a 400 MB test file and forcing it onto the card, taking 10–20
 seconds. Run it when using a new card. The first fps measurement runs it
