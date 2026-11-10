@@ -58,6 +58,7 @@ nav:
     - Overview: setup/overview.md
     - Set up the dev Pi: setup/dev_pi.md
     - Add a new Pi: setup/add_pi.md
+    - Install on a single Pi: setup/standalone_pi.md
     - Replace the dev Pi: setup/replace_dev_pi.md
     - Update all Pis: setup/update_pis.md
     - Day-to-day maintenance: setup/maintenance.md

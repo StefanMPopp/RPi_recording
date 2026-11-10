@@ -39,6 +39,7 @@ rig 3 exists only on rig 3, and will be silently overwritten at the next update.
 |---|---|---|
 | Set up the dev Pi | Once, ever | [Set up the dev Pi](dev_pi.md) |
 | Add a recording Pi | When adding a rig | [Add a new Pi](add_pi.md) |
+| Install or update a Pi without the dev Pi | One-off or remote rigs | [Install on a single Pi](standalone_pi.md) |
 | Push a software update | Whenever code changes | [Update all Pis](update_pis.md) |
 | Replace or hand over the dev Pi | On upgrade, failure, or handover | [Replace the dev Pi](replace_dev_pi.md) |
 | Routine checks and fixes | Ongoing | [Day-to-day maintenance](maintenance.md) |

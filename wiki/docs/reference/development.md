@@ -184,7 +184,7 @@ python3 recorder_app/main.py
 
 | Symptom | Look at |
 |---|---|
-| Camera errors | `libcamera-hello --list-cameras`, ribbon cable |
+| Camera errors | `rpicam-hello --list-cameras`, ribbon cable |
 | Dropped frames | Queue depth in the status panel; write speed calibration |
 | UI freezes | Work being done on the Qt main thread instead of a worker |
 | Colors wrong | The YUV conversion constant in `camera.py` |

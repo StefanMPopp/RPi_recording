@@ -30,6 +30,7 @@ RPi_recording/
 │   ├── mkdocs.yml
 │   └── docs/
 │
+├── install.sh                    install/update one Pi without Ansible
 ├── .gitignore
 ├── LICENSE
 └── README.md                     one-liner pointing at the wiki

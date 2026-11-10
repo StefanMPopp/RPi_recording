@@ -6,6 +6,10 @@ waiting for downloads.
 Two parts: **manual preparation** needing physical access, then
 **bootstrapping**, which is automatic.
 
+!!! tip "No dev Pi at hand?"
+    To set up a single Pi directly with a keyboard and monitor, without SSH or
+    Ansible, see [Install on a single Pi](standalone_pi.md).
+
 ---
 
 ## Part 1 — Manual preparation
@@ -27,7 +31,7 @@ Two parts: **manual preparation** needing physical access, then
 The HQ camera normally works out of the box on current Raspberry Pi OS. Confirm:
 
 ```bash
-libcamera-hello --list-cameras
+rpicam-hello --list-cameras
 ```
 
 If the IMX477 is not listed, check the ribbon cable at both ends before

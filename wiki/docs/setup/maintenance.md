@@ -44,7 +44,7 @@ ansible pis -i inventory.ini -a "COMMAND"
 | Free space | `-a "df -h /"` |
 | Temperature | `-a "vcgencmd measure_temp"` |
 | Uptime | `-a "uptime"` |
-| Camera detected | `-a "libcamera-hello --list-cameras"` |
+| Camera detected | `-a "rpicam-hello --list-cameras"` |
 | Recordings this month | `-a "ls -la /home/pi/Projects"` |
 | Current commit | `-a "git -C /home/pi/RPi_recording log -1 --oneline"` |
 | Reboot | `-a "reboot" --become` |

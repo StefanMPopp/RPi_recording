@@ -44,7 +44,9 @@
       failed_when: false
 
     - name: Camera
-      ansible.builtin.command: libcamera-hello --list-cameras
+      # rpicam-hello on current Raspberry Pi OS, libcamera-hello on older releases
+      ansible.builtin.shell:
+        cmd: "$(command -v rpicam-hello || command -v libcamera-hello) --list-cameras 2>&1"
       register: camera
       changed_when: false
       failed_when: false

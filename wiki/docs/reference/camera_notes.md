@@ -159,7 +159,7 @@ will record.
 ## Camera not detected
 
 ```bash
-libcamera-hello --list-cameras
+rpicam-hello --list-cameras
 ```
 
 If the IMX477 is absent:
@@ -176,11 +176,14 @@ If the IMX477 is absent:
 
 | Purpose | Command |
 |---|---|
-| List cameras and modes | `libcamera-hello --list-cameras` |
-| Quick preview test | `libcamera-hello -t 5000` |
-| Capture a still | `libcamera-still -o test.jpg` |
+| List cameras and modes | `rpicam-hello --list-cameras` |
+| Quick preview test | `rpicam-hello -t 5000` |
+| Capture a still | `rpicam-still -o test.jpg` |
 | Temperature | `vcgencmd measure_temp` |
 | Throttling history | `vcgencmd get_throttled` |
+
+Raspberry Pi OS releases before late 2023 call these tools `libcamera-hello` and
+`libcamera-still`; current releases only have the `rpicam-` names.
 
 `get_throttled` returning anything other than `0x0` means the Pi has been
 throttled at some point — worth checking when a rig drops frames at settings
