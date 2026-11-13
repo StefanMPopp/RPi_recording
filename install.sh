@@ -14,6 +14,10 @@
 #
 #     ~/RPi_recording/install.sh
 #
+# The app runs the same update from Settings -> Update app, with --from-app:
+# then the app may stay open (it restarts itself afterwards), and sudo never
+# asks for a password, since there is no terminal to type it into.
+#
 # Safe to re-run: anything already in place is left as it is. Local edits to
 # the code stop the script rather than being discarded.
 #
@@ -30,12 +34,17 @@ BRANCH="main"
 REPO_DIR="$HOME/RPi_recording"
 PROJECTS_DIR="$HOME/Projects"
 LAUNCHER="$HOME/Desktop/RPi Recorder.desktop"
+FROM_APP=false
+SUDO=(sudo)
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 preflight() {
     [[ $EUID -ne 0 ]] || fail "run this as your normal user, not with sudo."
+
+    # The app updates itself while open and restarts once this has finished.
+    ! $FROM_APP || return 0
 
     # Matches a python process running main.py, not this script or a shell.
     if pgrep -f "^(/usr/bin/)?python3? .*recorder_app/main\.py" >/dev/null; then
@@ -46,8 +55,8 @@ preflight() {
 ensure_git() {
     if ! command -v git >/dev/null; then
         step "Installing git"
-        sudo apt-get update
-        sudo apt-get install -y git
+        "${SUDO[@]}" apt-get update
+        "${SUDO[@]}" apt-get install -y git
     fi
 }
 
@@ -110,8 +119,13 @@ install_packages() {
         step "System packages already installed"
     else
         step "Installing system packages: ${missing[*]}"
-        sudo apt-get update
-        sudo apt-get install -y "${missing[@]}"
+        if ! "${SUDO[@]}" true 2>/dev/null; then
+            fail "this update needs new system packages (${missing[*]}), which need the
+password. Close the app and run in a terminal:
+    $REPO_DIR/install.sh"
+        fi
+        "${SUDO[@]}" apt-get update
+        "${SUDO[@]}" apt-get install -y "${missing[@]}"
     fi
 
     step "Installing Python packages"
@@ -148,6 +162,12 @@ check_camera() {
 }
 
 main() {
+    case "${1:-}" in
+        "") ;;
+        --from-app) FROM_APP=true; SUDO=(sudo -n) ;;
+        *) fail "unknown option: $1" ;;
+    esac
+
     preflight
     ensure_git
     get_code
@@ -156,6 +176,8 @@ main() {
 
     step "Done"
     echo "Version:  $(git -C "$REPO_DIR" log -1 --oneline)"
+    # The open app holds the camera, so it cannot be listed from here.
+    ! $FROM_APP || return 0
     check_camera
     echo
     echo "Start the recorder with the 'RPi Recorder' icon on the desktop."

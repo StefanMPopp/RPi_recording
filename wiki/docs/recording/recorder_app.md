@@ -202,3 +202,14 @@ automatically if it has never been done. The result is stored per Pi.
 
 **Settings → Include treatment names in file name** — the naming style toggle
 described above.
+
+**Settings → Update app** — checks GitHub for a newer release and, if there is
+one, offers to install it. The app updates itself and restarts, usually within
+a minute; settings, calibration and recordings are kept. Not available while
+recording. The Pi needs internet access.
+
+**Settings → Check for updates at startup** — on by default. A few seconds after
+the app starts it asks GitHub whether a newer release exists and, if so, offers
+to update. Offline, or while a recording or dialog is open, it stays silent
+(the status bar mentions an available update instead). Switch it off on rigs
+that should stay on a fixed version during an experiment.

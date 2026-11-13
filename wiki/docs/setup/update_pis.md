@@ -18,6 +18,12 @@ Step 2 does not update the rigs. Step 3 does. Pushing without running the
 playbook leaves the rigs behind; running the playbook without pushing gives them
 nothing new to fetch.
 
+Rigs can also update themselves from **Settings → Update app**, and offer to at
+startup. They compare their `APP_VERSION` (in `recorder_app/constants.py`) with
+the one on GitHub's `main`, so a push that raises `APP_VERSION` is announced on
+every rig with internet access the next time the app starts; pushes that leave
+it unchanged are not.
+
 ---
 
 ## 1. Edit and test on the dev Pi

@@ -60,6 +60,7 @@ from metadata   import build_metadata, write_metadata
 from metadata_list import load_metadata_list, build_auto_file_name, MetadataRow
 import formats
 from formats    import OUTPUT_FORMATS, DEFAULT_FORMAT, OutputFormat, find_format
+import updater
 
 
 # =============================================================================
@@ -932,6 +933,26 @@ def _build_capacity_table(sensor_mode, frame_size: tuple[int, int], channels: in
 
 
 
+class _BackgroundCall(QThread):
+    """
+    Runs one function off the UI thread and emits `done` with its outcome:
+    (True, return value) or (False, the exception raised).
+    """
+
+    done = pyqtSignal(bool, object)
+
+    def __init__(self, function, parent=None):
+        super().__init__(parent)
+        self._function = function
+
+    def run(self) -> None:
+        try:
+            outcome = (True, self._function())
+        except Exception as error:      # reported to the UI, not lost in the thread
+            outcome = (False, error)
+        self.done.emit(*outcome)
+
+
 class MainWindow(QMainWindow):
 
     frame_ready = pyqtSignal(np.ndarray)   # camera thread → UI thread
@@ -971,6 +992,8 @@ class MainWindow(QMainWindow):
         self._recording_settings: RecordingSettings | None = None
         self._status_timer = QTimer(self)
         self._status_timer.timeout.connect(self._update_recording_status)
+        # Version check or install running in the background, if any
+        self._update_task: _BackgroundCall | None = None
 
         self.setWindowTitle(f"{APP_NAME}  {APP_VERSION}")
         # Wide enough for a 4:3 preview (the tallest aspect the sensor offers)
@@ -994,6 +1017,10 @@ class MainWindow(QMainWindow):
         # Connect camera frames to preview widget via Qt signal (thread-safe)
         self.frame_ready.connect(self._preview_widget.update_frame)
         self._preview_widget.crop_dragged.connect(self._on_crop_dragged)
+
+        # After the window is up, so a slow network never delays the start
+        if self._app_config["app"].get("check_for_updates", True):
+            QTimer.singleShot(3000, self._check_for_update_at_startup)
 
     # =========================================================================
     # Menu bar
@@ -1035,6 +1062,20 @@ class MainWindow(QMainWindow):
         )
         self._treatment_names_action.toggled.connect(self._on_treatment_names_toggled)
         settings_menu.addAction(self._treatment_names_action)
+
+        settings_menu.addSeparator()
+
+        update_action = QAction("Update app…", self)
+        update_action.triggered.connect(self._on_update_app)
+        settings_menu.addAction(update_action)
+
+        self._check_updates_action = QAction("Check for updates at startup", self)
+        self._check_updates_action.setCheckable(True)
+        self._check_updates_action.setChecked(
+            self._app_config["app"].get("check_for_updates", True)
+        )
+        self._check_updates_action.toggled.connect(self._on_check_updates_toggled)
+        settings_menu.addAction(self._check_updates_action)
 
     # =========================================================================
     # UI construction
@@ -1672,6 +1713,7 @@ class MainWindow(QMainWindow):
         mono_font = QFont("DejaVu Sans Mono", 13)
         stats = [
             ("Elapsed",        "_elapsed_label"),
+            ("Max duration",   "_max_duration_label"),
             ("Frames written", "_frames_label"),
             ("Dropped frames", "_dropped_label"),
             ("Write headroom", "_headroom_live_label"),
@@ -1685,6 +1727,9 @@ class MainWindow(QMainWindow):
             setattr(self, attr_name, val)
             grid.addWidget(dim, row, 0)
             grid.addWidget(val, row, 1)
+            if attr_name == "_max_duration_label":
+                # Shown only for recordings with a set duration
+                self._max_duration_title = dim
 
         layout.addLayout(grid)
 
@@ -2348,6 +2393,11 @@ class MainWindow(QMainWindow):
         )
         self._bottom_status.setText(f"Recording to {target.name}")
         self._warning_label.setText("")
+        has_max_duration = settings.duration_s is not None
+        self._max_duration_title.setVisible(has_max_duration)
+        self._max_duration_label.setVisible(has_max_duration)
+        if has_max_duration:
+            self._max_duration_label.setText(f"{settings.duration_s:7.0f} s")
 
         # Poll the session for live stats
         self._status_timer.start(250)
@@ -2625,6 +2675,13 @@ class MainWindow(QMainWindow):
                 self._elapsed_label.setStyleSheet(f"color: {COLOR['red']};")
             else:
                 self._elapsed_label.setStyleSheet(f"color: {COLOR['accent']};")
+
+        max_duration_s = self._recording_settings.duration_s if self._recording_settings else None
+        if max_duration_s is not None:
+            remaining_s = max(0.0, max_duration_s - stats.elapsed_s)
+            self._max_duration_label.setText(
+                f"{max_duration_s:7.0f} s   ({remaining_s:.0f} s left)"
+            )
 
         # Queue depth is the live indicator of whether the disk is keeping up
         queue_pct = min(100, int(100 * stats.queue_depth
@@ -3378,6 +3435,119 @@ class MainWindow(QMainWindow):
                 return
 
         super().keyPressEvent(event)
+
+    # =========================================================================
+    # Updates
+    # =========================================================================
+
+    def _on_check_updates_toggled(self, checked: bool) -> None:
+        self._app_config["app"]["check_for_updates"] = checked
+        save_app_config(self._app_config)
+
+    def _run_update_task(self, function, on_done) -> bool:
+        """Start `function` in the background; False if an update task is already running."""
+        if self._update_task is not None:
+            return False
+        self._update_task = _BackgroundCall(function, self)
+
+        def finished(succeeded: bool, result) -> None:
+            self._update_task = None
+            on_done(succeeded, result)
+
+        self._update_task.done.connect(finished)
+        self._update_task.start()
+        return True
+
+    def _check_for_update_at_startup(self) -> None:
+        """Offer a newer release if there is one; stay silent on any problem."""
+        def on_done(succeeded: bool, latest) -> None:
+            if not succeeded or not updater.is_newer(latest):
+                return
+            # Never interrupt a recording or another dialog; the menu item
+            # offers the same update any time.
+            if (self._is_recording or self._is_finishing
+                    or QApplication.activeModalWidget() is not None):
+                self._bottom_status.setText(
+                    f"Version {latest} is available — Settings → Update app")
+                return
+            self._offer_update(latest)
+
+        self._run_update_task(updater.fetch_latest_version, on_done)
+
+    def _on_update_app(self) -> None:
+        from PyQt6.QtWidgets import QMessageBox
+
+        if self._is_recording or self._is_finishing:
+            QMessageBox.information(self, "Recording in progress",
+                                    "Finish the recording before updating the app.")
+            return
+
+        previous_status = self._bottom_status.text()
+
+        def on_done(succeeded: bool, latest) -> None:
+            QApplication.restoreOverrideCursor()
+            self._bottom_status.setText(previous_status)
+            if not succeeded:
+                QMessageBox.warning(
+                    self, "Update check failed",
+                    "Could not find out the latest version from GitHub. "
+                    "Check that this Pi is connected to the internet.\n\n"
+                    f"Details: {latest}")
+            elif not updater.is_newer(latest):
+                QMessageBox.information(
+                    self, "Up to date",
+                    f"This is the latest version ({APP_VERSION}).")
+            else:
+                self._offer_update(latest)
+
+        if self._run_update_task(updater.fetch_latest_version, on_done):
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            self._bottom_status.setText("Checking for updates…")
+        else:
+            self._bottom_status.setText("Already checking for updates — try again in a few seconds")
+
+    def _offer_update(self, latest: str) -> None:
+        from PyQt6.QtWidgets import QMessageBox
+
+        answer = QMessageBox.question(
+            self, "Update available",
+            f"Version {latest} is available (this is {APP_VERSION}).\n\n"
+            "Update now? The app restarts when the update is done, usually "
+            "within a minute. Your settings, calibration and recordings are "
+            "kept.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self._install_update(latest)
+
+    def _install_update(self, latest: str) -> None:
+        from PyQt6.QtWidgets import QMessageBox, QProgressDialog
+
+        if self._is_recording or self._is_finishing:
+            return
+        progress = QProgressDialog(f"Updating to version {latest}…", None, 0, 0, self)
+        progress.setWindowTitle("Updating")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+
+        def on_done(succeeded: bool, result) -> None:
+            progress.close()
+            installed, output = result if succeeded else (False, str(result))
+            if not installed:
+                box = QMessageBox(QMessageBox.Icon.Warning, "Update failed",
+                                  "The update did not complete; the app keeps "
+                                  "running the current version. The last line "
+                                  "below says why.", parent=self)
+                box.setDetailedText(output.strip()[-4000:])
+                box.exec()
+                return
+            QMessageBox.information(self, "Update installed",
+                                    f"Version {latest} is installed. The app restarts now.")
+            self._camera.release()
+            updater.restart_app()
+
+        if self._run_update_task(updater.install_update, on_done):
+            progress.show()
 
     # =========================================================================
     # Cleanup

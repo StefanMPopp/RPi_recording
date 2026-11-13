@@ -15,6 +15,7 @@ RPi_recording/
 │   ├── formats.py                output formats (MJPEG, TIFF, PNG, H.264)
 │   ├── calibration.py            exposure/speed/aperture analysis
 │   ├── calibration_window.py     Settings → Calibrate camera
+│   ├── updater.py                Settings → Update app, startup check
 │   ├── requirements.txt          pip dependencies only
 │   └── example_metadata_list.csv
 │

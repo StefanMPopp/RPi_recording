@@ -18,6 +18,7 @@
 | `formats.py` | The output formats, each with a stable key used by code and profiles. |
 | `calibration.py` | Analysis behind Settings → Calibrate camera: animal detection, brightness levels, speed, aperture sharpness, reading recordings. |
 | `calibration_window.py` | The calibration window. |
+| `updater.py` | Settings → Update app and the startup check: reads `APP_VERSION` from GitHub's `main`, installs with `install.sh --from-app`, restarts the app. |
 
 Dependencies run one way: `main_window` imports the others; they do not import
 it. The exception is `calibration_window`, which is part of the UI: it reuses

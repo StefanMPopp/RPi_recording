@@ -101,7 +101,13 @@ Updates leave it alone.
 
 ## Updating
 
-Close the recorder app, then run:
+From the app: **Settings → Update app**. With *Check for updates at startup*
+switched on (the default), the app also offers each new release when it starts.
+Either way it runs the same `install.sh` as below and restarts itself.
+
+If a release needs new system packages and `sudo` asks for a password on this
+Pi, the app cannot type it, so it stops and says so. Then update from a
+terminal: close the recorder app, and run:
 
 ```bash
 ~/RPi_recording/install.sh
@@ -144,7 +150,9 @@ git log --oneline -10            # find the version you want
 git checkout <commit>            # e.g. git checkout d293b73
 ```
 
-The next run of `install.sh` brings the Pi back to the latest version.
+The next run of `install.sh`, or **Settings → Update app**, brings the Pi back
+to the latest version. Switch off *Settings → Check for updates at startup* if
+the app should not offer that.
 
 ---
 

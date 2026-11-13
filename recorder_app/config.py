@@ -94,6 +94,8 @@ def _default_app_config() -> dict:
             #   False -> foraging_high-dim_3
             #   True  -> foraging_density-high-light-dim_3
             "include_treatment_names": False,
+            # Ask GitHub for a newer release each time the app starts
+            "check_for_updates": True,
         },
     }
 
