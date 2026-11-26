@@ -20,9 +20,15 @@ When a recording starts, the controls are replaced by a live status panel.
 The current zoom level is shown at the top right of the preview, with a
 **Reset view** button next to it while zoomed.
 
-The preview is a lower-resolution stream than the recording — it exists to
-check framing and focus, not to judge final image quality. Zoom does not affect
-what is recorded.
+The preview is a lower-resolution stream than the recording (960 px wide).
+Zoomed in with **Full resolution zoom** ticked (top right, the default), the
+visible part is cut from the full-resolution frame instead, so pixels on screen
+are recorded pixels: you can judge focus and measure px/cm there. The zoom
+readout says **full res** or **preview res** to show which you are seeing.
+
+While recording, the zoomed view always uses the preview stream, so recording
+speed is not affected. Untick the box if the preview feels sluggish when
+zoomed in. Zoom does not affect what is recorded.
 
 With **Crop** ticked, the preview shows the recorded region as an amber frame
 and dims everything outside it. Drag inside the frame to move it, or drag an

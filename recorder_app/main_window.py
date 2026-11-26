@@ -547,16 +547,26 @@ class PreviewWidget(QLabel):
     The recording crop, when set, is drawn as a frame with everything outside
     it dimmed. It is held in normalized frame coordinates; dragging emits
     crop_dragged with the new rectangle, and the window decides what to keep.
+
+    Preview frames are PREVIEW_WIDTH wide, far fewer pixels than recorded.
+    Zoomed in with full resolution enabled, the widget asks for the visible
+    region at sensor-mode resolution (detail_request_changed, a request for
+    PiCamera.set_detail_request) and shows what comes back through
+    update_detail instead of enlarging the preview frame. Where no detail
+    arrives, as while recording, it falls back to the preview frame.
     """
 
     zoom_changed = pyqtSignal(float)
     crop_dragged = pyqtSignal(float, float, float, float)   # x, y, width, height
+    detail_request_changed = pyqtSignal(object)   # (x, y, w, h, target_width) or None
+    full_resolution_shown  = pyqtSignal(bool)
 
     _MIN_ZOOM  = 1.0
     _MAX_ZOOM  = 12.0
     _ZOOM_STEP = 1.15
     _PAN_STEP  = 0.06     # fraction of the visible width/height per scroll notch
     _EDGE_GRAB_PX = 8     # how close to a crop edge a press resizes rather than moves
+    _DETAIL_STALE_S = 1.0 # a detail older than this gives way to the preview frame
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -574,6 +584,15 @@ class PreviewWidget(QLabel):
         self._center_y      = 0.5
         self._current_frame: np.ndarray | None = None
 
+        # Full-resolution detail of the zoomed view: whether to ask for it,
+        # what is asked for, and the last one received with when it came
+        self._full_resolution_enabled = True
+        self._detail_request: tuple | None = None
+        self._detail_frame:   np.ndarray | None = None
+        self._detail_frame_request: tuple | None = None
+        self._detail_received_at = 0.0
+        self._showing_full_resolution = False
+
         # Recording crop overlay, normalized (x, y, width, height), or None
         self._crop_rect: tuple[float, float, float, float] | None = None
         self._crop_editable = True
@@ -589,13 +608,66 @@ class PreviewWidget(QLabel):
 
     def update_frame(self, frame_array: np.ndarray) -> None:
         self._current_frame = frame_array
+        # A current detail covers the view better; the frame is kept for when
+        # the detail stops coming
+        if not self._detail_is_current():
+            self._render()
+
+    def update_detail(self, frame_array: np.ndarray, request: tuple) -> None:
+        """A full-resolution cut of the view, answering a detail request."""
+        if request != self._detail_request:
+            return      # asked for before the view last changed
+        self._detail_frame         = frame_array
+        self._detail_frame_request = request
+        self._detail_received_at   = time.monotonic()
         self._render()
 
-    def _render(self) -> None:
-        if self._current_frame is None:
-            return
+    @property
+    def detail_request(self) -> tuple | None:
+        return self._detail_request
 
-        frame = self._current_frame
+    @property
+    def zoom_factor(self) -> float:
+        return self._zoom_factor
+
+    @property
+    def showing_full_resolution(self) -> bool:
+        return self._showing_full_resolution
+
+    def set_full_resolution_enabled(self, enabled: bool) -> None:
+        self._full_resolution_enabled = enabled
+        self._update_detail_request()
+        self._render()
+
+    def _update_detail_request(self) -> None:
+        """Ask for the visible region at full resolution, or for nothing."""
+        request = None
+        if self._full_resolution_enabled and self._zoom_factor > 1.001:
+            extent = 1.0 / self._zoom_factor
+            request = (self._center_x - extent / 2, self._center_y - extent / 2,
+                       extent, extent, max(1, self.width()))
+        if request != self._detail_request:
+            self._detail_request = request
+            self.detail_request_changed.emit(request)
+
+    def _detail_is_current(self) -> bool:
+        return (self._detail_frame is not None
+                and self._detail_request is not None
+                and self._detail_frame_request == self._detail_request
+                and time.monotonic() - self._detail_received_at < self._DETAIL_STALE_S)
+
+    def _render(self) -> None:
+        full_resolution = self._detail_is_current()
+        if full_resolution != self._showing_full_resolution:
+            self._showing_full_resolution = full_resolution
+            self.full_resolution_shown.emit(full_resolution)
+
+        if full_resolution:
+            frame = self._detail_frame
+        elif self._current_frame is None:
+            return
+        else:
+            frame = self._current_frame
 
         # Normalize to RGB — the camera may deliver grayscale (2D) or RGBA
         if frame.ndim == 2:
@@ -606,7 +678,9 @@ class PreviewWidget(QLabel):
         frame_height, frame_width = frame.shape[:2]
         self._view_rect = (0.0, 0.0, 1.0, 1.0)
 
-        if self._zoom_factor > 1.0:
+        if full_resolution:
+            self._view_rect = self._detail_request[:4]
+        elif self._zoom_factor > 1.0:
             crop_width  = max(1, int(frame_width  / self._zoom_factor))
             crop_height = max(1, int(frame_height / self._zoom_factor))
             left = int(self._center_x * frame_width  - crop_width  / 2)
@@ -755,6 +829,7 @@ class PreviewWidget(QLabel):
 
     def resizeEvent(self, event) -> None:
         # Re-render at the new widget size so the frame refits immediately
+        self._update_detail_request()
         self._render()
         super().resizeEvent(event)
 
@@ -778,6 +853,7 @@ class PreviewWidget(QLabel):
         self._zoom_factor = 1.0
         self._center_x = self._center_y = 0.5
         self.zoom_changed.emit(self._zoom_factor)
+        self._update_detail_request()
         self._render()
 
     def wheelEvent(self, event) -> None:
@@ -820,6 +896,7 @@ class PreviewWidget(QLabel):
 
         self._clamp_center()
         self.zoom_changed.emit(self._zoom_factor)
+        self._update_detail_request()
         self._render()
 
     def _pan(self, dx_notches: float, dy_notches: float) -> None:
@@ -833,6 +910,7 @@ class PreviewWidget(QLabel):
         self._center_y -= dy_notches * step
 
         self._clamp_center()
+        self._update_detail_request()
         self._render()
 
     def mouseDoubleClickEvent(self, event) -> None:
@@ -955,7 +1033,8 @@ class _BackgroundCall(QThread):
 
 class MainWindow(QMainWindow):
 
-    frame_ready = pyqtSignal(np.ndarray)   # camera thread → UI thread
+    frame_ready  = pyqtSignal(np.ndarray)       # camera thread → UI thread
+    detail_ready = pyqtSignal(np.ndarray, object)   # full-resolution cut, its request
 
     def __init__(self):
         super().__init__()
@@ -1016,6 +1095,8 @@ class MainWindow(QMainWindow):
 
         # Connect camera frames to preview widget via Qt signal (thread-safe)
         self.frame_ready.connect(self._preview_widget.update_frame)
+        self.detail_ready.connect(self._preview_widget.update_detail)
+        self._preview_widget.detail_request_changed.connect(self._send_detail_request)
         self._preview_widget.crop_dragged.connect(self._on_crop_dragged)
 
         # After the window is up, so a slow network never delays the start
@@ -1145,8 +1226,22 @@ class MainWindow(QMainWindow):
         self._zoom_reset_button.setFixedHeight(20)
         self._zoom_reset_button.setStyleSheet("font-size: 11px; padding: 1px 8px;")
         self._zoom_reset_button.setVisible(False)
+        self._full_resolution_check = QCheckBox("Full resolution zoom")
+        self._full_resolution_check.setChecked(True)
+        self._full_resolution_check.setStyleSheet("font-size: 11px;")
+        self._full_resolution_check.setToolTip(
+            "Zoomed in, show the recorded resolution instead of enlarging the\n"
+            f"{PREVIEW_WIDTH} px wide preview, so one cm on screen spans as many\n"
+            "pixels as in the recording. Costs some CPU while zoomed in.\n"
+            "Not available while recording: the preview there stays at\n"
+            "preview resolution, so recording speed is not affected."
+        )
+        self._full_resolution_check.toggled.connect(
+            self._preview_widget.set_full_resolution_enabled)
         header_row.addWidget(header)
         header_row.addStretch()
+        header_row.addWidget(self._full_resolution_check)
+        header_row.addSpacing(12)
         header_row.addWidget(self._zoom_label)
         header_row.addWidget(self._zoom_reset_button)
         layout.addLayout(header_row)
@@ -1178,13 +1273,25 @@ class MainWindow(QMainWindow):
 
         # Wire zoom readout
         self._preview_widget.zoom_changed.connect(self._on_zoom_changed)
+        self._preview_widget.full_resolution_shown.connect(self._on_full_resolution_shown)
         self._zoom_reset_button.clicked.connect(self._preview_widget.reset_view)
 
         return panel
 
     def _on_zoom_changed(self, zoom_factor: float) -> None:
-        self._zoom_label.setText(f"zoom {zoom_factor:.1f}×")
+        self._refresh_zoom_label()
+
+    def _on_full_resolution_shown(self, shown: bool) -> None:
+        self._refresh_zoom_label()
+
+    def _refresh_zoom_label(self) -> None:
+        zoom_factor = self._preview_widget.zoom_factor
         is_zoomed = zoom_factor > 1.001
+        resolution = ""
+        if is_zoomed:
+            resolution = ("  full res" if self._preview_widget.showing_full_resolution
+                          else "  preview res")
+        self._zoom_label.setText(f"zoom {zoom_factor:.1f}×{resolution}")
         self._zoom_reset_button.setVisible(is_zoomed)
         self._zoom_label.setStyleSheet(
             f"color: {COLOR['accent'] if is_zoomed else COLOR['text_dim']}; "
@@ -1785,6 +1892,10 @@ class MainWindow(QMainWindow):
         self._sensor_mode_combo.blockSignals(False)
         self._on_sensor_mode_changed(0)
 
+    def _send_detail_request(self, request: tuple | None) -> None:
+        self._camera.set_detail_request(
+            request, lambda frame, answered: self.detail_ready.emit(frame, answered))
+
     def _start_preview(self) -> None:
         if self._show_preview_check.isChecked():
             self._camera.start_preview(
@@ -2000,6 +2111,7 @@ class MainWindow(QMainWindow):
         self._calibration_region = window.region
         # Preview frames come back to this window
         self._camera.set_preview_callback(lambda frame: self.frame_ready.emit(frame))
+        self._send_detail_request(self._preview_widget.detail_request)
         if accepted:
             self._set_exposure(window.exposure)
             self._bottom_status.setText(

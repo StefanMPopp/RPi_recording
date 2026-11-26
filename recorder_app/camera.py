@@ -183,6 +183,10 @@ class PiCamera:
         # When the sensor exposed the last PREVIEW frame, in seconds; set
         # before the preview callback runs, so the callback can read it
         self.last_preview_time_s: float | None = None
+        # Full-resolution detail of the zoomed preview: the requested view
+        # (see set_detail_request) and where to send its pixels, or None
+        self._detail_request: tuple | None = None
+        self._detail_callback: Callable[[np.ndarray, tuple], None] | None = None
         # Metadata of the last frame delivered (exposure time, gain, ...)
         self.last_metadata: dict = {}
         # Fixed exposure (see set_exposure), or None for automatic
@@ -360,8 +364,31 @@ class PiCamera:
         return self._preview_running
 
     def set_preview_callback(self, callback: Callable[[np.ndarray], None]) -> None:
-        """Send preview frames to this callback instead, from the next frame on."""
+        """
+        Send preview frames to this callback instead, from the next frame on.
+        Ends any detail request, which belongs to the previous receiver.
+        """
         self._preview_callback = callback
+        self._detail_request = None
+
+    def set_detail_request(self, request: tuple | None,
+                           callback: Callable[[np.ndarray, tuple], None] | None = None) -> None:
+        """
+        Also deliver part of the frame at full sensor-mode resolution.
+
+        `request` is (x, y, width, height, target_width): a normalized region
+        of the frame and the display width it will be shown at. Each preview
+        frame then also calls callback(pixels, request) with that region cut
+        from the main stream, RGB or grayscale like the preview frames. When the
+        region is at least twice target_width pixels across, rows and columns
+        are skipped evenly, which bounds the copy out of the slow camera
+        buffer; zoomed in far enough, every sensor pixel is kept.
+
+        Only the idle preview loop serves this. While recording, the record
+        loop serves the preview and no detail is sent. None stops it.
+        """
+        self._detail_callback = callback
+        self._detail_request  = request
 
     def start_preview(self, callback: Callable[[np.ndarray], None], fps: int = 10) -> None:
         """
@@ -429,9 +456,15 @@ class PiCamera:
                 except TimeoutError:
                     self._on_stall()
                     continue
+                detail_request  = self._detail_request
+                detail_callback = self._detail_callback
+                detail = None
                 try:
                     yuv_frame = request.make_array("lores")
                     self.last_metadata = request.get_metadata()
+                    if detail_request is not None and detail_callback is not None:
+                        with MappedArray(request, "main", write=False) as mapped:
+                            detail = self._cut_detail(mapped.array, detail_request)
                 finally:
                     request.release()
                 sensor_timestamp_ns = self.last_metadata.get("SensorTimestamp")
@@ -445,11 +478,37 @@ class PiCamera:
                     frame = self._yuv420_to_rgb(yuv_frame)
                 if self._preview_callback is not None:
                     self._preview_callback(frame)
+                if detail is not None:
+                    detail_callback(detail, detail_request)
             except Exception:
                 pass
             elapsed   = time.perf_counter() - loop_start
             sleep_for = max(0.0, frame_interval - elapsed)
             time.sleep(sleep_for)
+
+    def _cut_detail(self, source: np.ndarray, request: tuple) -> np.ndarray:
+        """
+        Copy the requested region out of the mapped main stream, for display.
+
+        `source` is YUV420 (2D, luma in the first `height` rows) after a
+        grayscale recording configured it so, else RGB888, which is B,G,R in
+        memory. Only the kept pixels are read from the uncached buffer.
+        """
+        import cv2
+        x, y, width, height, target_width = request
+        mode_width, mode_height = self._active_mode.width, self._active_mode.height
+        left   = max(0, min(int(x * mode_width),  mode_width  - 1))
+        top    = max(0, min(int(y * mode_height), mode_height - 1))
+        right  = max(left + 1, min(int(round((x + width)  * mode_width)),  mode_width))
+        bottom = max(top  + 1, min(int(round((y + height) * mode_height)), mode_height))
+        step = max(1, (right - left) // max(1, int(target_width)))
+
+        if source.ndim == 2:
+            return np.ascontiguousarray(source[top:bottom:step, left:right:step])
+        pixels = np.ascontiguousarray(source[top:bottom:step, left:right:step, :3])
+        if self._preview_channels == 1:
+            return cv2.cvtColor(pixels, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(pixels, cv2.COLOR_BGR2RGB)
 
     @staticmethod
     def _yuv420_extract_y(yuv_frame: np.ndarray) -> np.ndarray:
@@ -939,6 +998,9 @@ class StubCamera:
 
     def set_preview_callback(self, callback: Callable[[np.ndarray], None]) -> None:
         self._preview_callback = callback
+
+    def set_detail_request(self, request: tuple | None, callback=None) -> None:
+        """No main stream to cut from; the preview stays at preview resolution."""
 
     def start_preview(self, callback: Callable[[np.ndarray], None], fps: int = 10) -> None:
         from constants import PREVIEW_WIDTH

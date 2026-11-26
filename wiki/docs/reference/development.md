@@ -156,6 +156,7 @@ pushing, check by hand:
 
 - [ ] The app starts
 - [ ] The preview runs; zoom and pan behave
+- [ ] Zoomed in, the readout says **full res**, and **preview res** while recording
 - [ ] Every sensor mode selects without error
 - [ ] A short recording works in MJPEG **and** one image stack format
 - [ ] The metadata file appears and contains what it should
