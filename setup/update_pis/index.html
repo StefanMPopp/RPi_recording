@@ -1451,6 +1451,11 @@
 <p>Step 2 does not update the rigs. Step 3 does. Pushing without running the
 playbook leaves the rigs behind; running the playbook without pushing gives them
 nothing new to fetch.</p>
+<p>Rigs can also update themselves from <strong>Settings → Update app</strong>, and offer to at
+startup. They compare their <code>APP_VERSION</code> (in <code>recorder_app/constants.py</code>) with
+the one on GitHub's <code>main</code>, so a push that raises <code>APP_VERSION</code> is announced on
+every rig with internet access the next time the app starts; pushes that leave
+it unchanged are not.</p>
 <hr />
 <h2 id="1-edit-and-test-on-the-dev-pi">1. Edit and test on the dev Pi<a class="headerlink" href="#1-edit-and-test-on-the-dev-pi" title="Permanent link">&para;</a></h2>
 <p>Work in <code>~/RPi_recording</code> as normal. Test before pushing:</p>

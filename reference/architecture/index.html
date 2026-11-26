@@ -1476,6 +1476,10 @@
 <td><code>calibration_window.py</code></td>
 <td>The calibration window.</td>
 </tr>
+<tr>
+<td><code>updater.py</code></td>
+<td>Settings → Update app and the startup check: reads <code>APP_VERSION</code> from GitHub's <code>main</code>, installs with <code>install.sh --from-app</code>, restarts the app.</td>
+</tr>
 </tbody>
 </table>
 <p>Dependencies run one way: <code>main_window</code> imports the others; they do not import

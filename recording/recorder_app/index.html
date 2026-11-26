@@ -1430,9 +1430,14 @@ When a recording starts, the controls are replaced by a live status panel.</p>
 </table>
 <p>The current zoom level is shown at the top right of the preview, with a
 <strong>Reset view</strong> button next to it while zoomed.</p>
-<p>The preview is a lower-resolution stream than the recording — it exists to
-check framing and focus, not to judge final image quality. Zoom does not affect
-what is recorded.</p>
+<p>The preview is a lower-resolution stream than the recording (960 px wide).
+Zoomed in with <strong>Full resolution zoom</strong> ticked (top right, the default), the
+visible part is cut from the full-resolution frame instead, so pixels on screen
+are recorded pixels: you can judge focus and measure px/cm there. The zoom
+readout says <strong>full res</strong> or <strong>preview res</strong> to show which you are seeing.</p>
+<p>While recording, the zoomed view always uses the preview stream, so recording
+speed is not affected. Untick the box if the preview feels sluggish when
+zoomed in. Zoom does not affect what is recorded.</p>
 <p>With <strong>Crop</strong> ticked, the preview shows the recorded region as an amber frame
 and dims everything outside it. Drag inside the frame to move it, or drag an
 edge or corner to resize it. The crop cannot be changed while recording.</p>
@@ -1617,6 +1622,15 @@ seconds. Run it when using a new card. The first fps measurement runs it
 automatically if it has never been done. The result is stored per Pi.</p>
 <p><strong>Settings → Include treatment names in file name</strong> — the naming style toggle
 described above.</p>
+<p><strong>Settings → Update app</strong> — checks GitHub for a newer release and, if there is
+one, offers to install it. The app updates itself and restarts, usually within
+a minute; settings, calibration and recordings are kept. Not available while
+recording. The Pi needs internet access.</p>
+<p><strong>Settings → Check for updates at startup</strong> — on by default. A few seconds after
+the app starts it asks GitHub whether a newer release exists and, if so, offers
+to update. Offline, or while a recording or dialog is open, it stays silent
+(the status bar mentions an available update instead). Switch it off on rigs
+that should stay on a fixed version during an experiment.</p>
 
 
 

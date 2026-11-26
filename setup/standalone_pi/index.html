@@ -1481,7 +1481,12 @@ to run or trust it. Choose <strong>Execute</strong> (or <strong>Trust</strong>),
 Updates leave it alone.</p>
 <hr />
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
-<p>Close the recorder app, then run:</p>
+<p>From the app: <strong>Settings → Update app</strong>. With <em>Check for updates at startup</em>
+switched on (the default), the app also offers each new release when it starts.
+Either way it runs the same <code>install.sh</code> as below and restarts itself.</p>
+<p>If a release needs new system packages and <code>sudo</code> asks for a password on this
+Pi, the app cannot type it, so it stops and says so. Then update from a
+terminal: close the recorder app, and run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~/RPi_recording/install.sh
 </code></pre></div>
 <p>The same script installs and updates. On a Pi that is already set up, it pulls
@@ -1508,7 +1513,9 @@ discard it.</p>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>-10<span class="w">            </span><span class="c1"># find the version you want</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>&lt;commit&gt;<span class="w">            </span><span class="c1"># e.g. git checkout d293b73</span>
 </code></pre></div>
-<p>The next run of <code>install.sh</code> brings the Pi back to the latest version.</p>
+<p>The next run of <code>install.sh</code>, or <strong>Settings → Update app</strong>, brings the Pi back
+to the latest version. Switch off <em>Settings → Check for updates at startup</em> if
+the app should not offer that.</p>
 <hr />
 <h2 id="doing-it-by-hand">Doing it by hand<a class="headerlink" href="#doing-it-by-hand" title="Permanent link">&para;</a></h2>
 <p>If the script fails and you want to work through it step by step, these are
